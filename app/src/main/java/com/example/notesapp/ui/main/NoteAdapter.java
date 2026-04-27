@@ -1,5 +1,6 @@
 package com.example.notesapp.ui.main;
 
+import android.text.format.DateUtils;
 import android.view.LayoutInflater;
 import android.view.View;
 import android.view.ViewGroup;
@@ -21,8 +22,7 @@ public class NoteAdapter extends RecyclerView.Adapter<NoteAdapter.NoteViewHolder
 
     private List<Note> notes = new ArrayList<>();
     private OnNoteActionListener listener;
-
-    // 🔥 Listener unico (più scalabile)
+     // 🔥 Listener unico (più scalabile)
     public interface OnNoteActionListener {
         void onNoteClick(Note note);
         void onDelete(Note note);
@@ -44,10 +44,20 @@ public class NoteAdapter extends RecyclerView.Adapter<NoteAdapter.NoteViewHolder
                 .inflate(R.layout.item_note, parent, false);
         return new NoteViewHolder(v);
     }
-
     @Override
     public void onBindViewHolder(@NonNull NoteViewHolder holder, int position) {
-        holder.bind(notes.get(position), listener);
+
+        Note note = notes.get(position);
+
+        holder.bind(note, listener);
+
+        holder.updatedAt.setText(
+                DateUtils.getRelativeTimeSpanString(
+                        note.getUpdatedAt(),
+                        System.currentTimeMillis(),
+                        DateUtils.MINUTE_IN_MILLIS
+                )
+        );
     }
 
     @Override
@@ -63,6 +73,7 @@ public class NoteAdapter extends RecyclerView.Adapter<NoteAdapter.NoteViewHolder
         TextView title, content;
         ImageView delete;
         MaterialCardView card;
+        TextView updatedAt;
 
         public NoteViewHolder(@NonNull View itemView) {
             super(itemView);
@@ -70,6 +81,7 @@ public class NoteAdapter extends RecyclerView.Adapter<NoteAdapter.NoteViewHolder
             title = itemView.findViewById(R.id.title);
             content = itemView.findViewById(R.id.content);
             delete = itemView.findViewById(R.id.btnDelete);
+            updatedAt = itemView.findViewById(R.id.updatedAt);
             card = itemView.findViewById(R.id.cardNote);
         }
 

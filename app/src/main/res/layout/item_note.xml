@@ -18,6 +18,7 @@
         android:layout_height="wrap_content"
         android:padding="12dp">
 
+        <!-- TITLE -->
         <TextView
             android:id="@+id/title"
             android:layout_width="0dp"
@@ -29,6 +30,7 @@
             app:layout_constraintStart_toStartOf="parent"
             app:layout_constraintEnd_toStartOf="@+id/btnDelete"/>
 
+        <!-- CONTENT -->
         <TextView
             android:id="@+id/content"
             android:layout_width="0dp"
@@ -39,6 +41,8 @@
             app:layout_constraintTop_toBottomOf="@id/title"
             app:layout_constraintStart_toStartOf="parent"
             app:layout_constraintEnd_toStartOf="@+id/btnDelete"/>
+
+        <!-- UPDATED AT -->
         <TextView
             android:id="@+id/updatedAt"
             android:layout_width="0dp"
@@ -49,6 +53,8 @@
             app:layout_constraintTop_toBottomOf="@id/content"
             app:layout_constraintStart_toStartOf="parent"
             app:layout_constraintEnd_toStartOf="@+id/btnDelete"/>
+
+        <!-- DELETE BUTTON -->
         <ImageButton
             android:id="@+id/btnDelete"
             android:layout_width="40dp"
