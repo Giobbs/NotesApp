@@ -26,6 +26,9 @@ public class NotesViewModel extends AndroidViewModel {
 
     private LiveData<List<Note>> currentSource;
 
+    private final MutableLiveData<String> tagFilter = new MutableLiveData<>(null);
+
+
     public NotesViewModel(@NonNull Application application) {
         super(application);
 
@@ -36,7 +39,7 @@ public class NotesViewModel extends AndroidViewModel {
         visibleNotes.addSource(showPinnedOnly, v -> refresh());
         visibleNotes.addSource(searchQuery, v -> refresh());
         visibleNotes.addSource(sortType, v -> refresh());
-
+        visibleNotes.addSource(tagFilter, v -> refresh());
         refresh();
     }
 
@@ -45,11 +48,13 @@ public class NotesViewModel extends AndroidViewModel {
         Boolean pinned = showPinnedOnly.getValue();
         String query = searchQuery.getValue();
         SortType sort = sortType.getValue();
+        String tag = tagFilter.getValue();
 
         LiveData<List<Note>> newSource = repository.getNotes(
                 query,
                 sort,
-                Boolean.TRUE.equals(pinned)
+                Boolean.TRUE.equals(pinned),
+                tag
         );
 
         if (currentSource != null) {
@@ -57,10 +62,8 @@ public class NotesViewModel extends AndroidViewModel {
         }
 
         currentSource = newSource;
-
         visibleNotes.addSource(currentSource, visibleNotes::setValue);
     }
-
     // =========================
     // API
     // =========================
@@ -104,5 +107,10 @@ public class NotesViewModel extends AndroidViewModel {
 
     public void setPinned(long id, boolean pinned) {
         repository.setPinned(id, pinned, null);
+    }
+
+
+    public void setTagFilter(String tag) {
+        tagFilter.setValue(tag);
     }
 }

@@ -5,40 +5,63 @@
     android:layout_width="match_parent"
     android:layout_height="match_parent">
 
-    <!-- CONTENT CONSTRAINT (GESTIONE SPAZI PERFETTA) -->
+    <!-- CONTENT -->
     <androidx.constraintlayout.widget.ConstraintLayout
         android:layout_width="match_parent"
         android:layout_height="match_parent">
 
-        <!-- SEARCH BAR -->
-        <androidx.appcompat.widget.SearchView
-            android:id="@+id/searchView"
+        <!-- =========================
+             SEARCH + TAG ROW
+        ========================== -->
+        <LinearLayout
+            android:id="@+id/searchRow"
             android:layout_width="0dp"
             android:layout_height="wrap_content"
-            android:queryHint="Cerca note..."
-            android:iconifiedByDefault="false"
-            android:focusable="true"
-            android:focusableInTouchMode="true"
+            android:orientation="horizontal"
+            android:padding="6dp"
             android:background="#FFFFFF"
             android:elevation="6dp"
-            android:padding="6dp"
             app:layout_constraintTop_toTopOf="parent"
             app:layout_constraintStart_toStartOf="parent"
-            app:layout_constraintEnd_toEndOf="parent"/>
+            app:layout_constraintEnd_toEndOf="parent">
 
-        <!-- LISTA -->
+            <!-- SEARCH -->
+            <androidx.appcompat.widget.SearchView
+                android:id="@+id/searchView"
+                android:layout_width="0dp"
+                android:layout_height="wrap_content"
+                android:layout_weight="1"
+                android:queryHint="Cerca note..."
+                android:iconifiedByDefault="false"
+                android:focusable="true"
+                android:focusableInTouchMode="true"/>
+
+            <!-- TAG FILTER -->
+            <Button
+                android:id="@+id/btnTagFilter"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:text="Tag"
+                android:layout_marginStart="8dp"/>
+        </LinearLayout>
+
+        <!-- =========================
+             LISTA NOTE
+        ========================== -->
         <androidx.recyclerview.widget.RecyclerView
             android:id="@+id/recyclerView"
             android:layout_width="0dp"
             android:layout_height="0dp"
             android:padding="12dp"
             android:clipToPadding="false"
-            app:layout_constraintTop_toBottomOf="@id/searchView"
+            app:layout_constraintTop_toBottomOf="@id/searchRow"
             app:layout_constraintBottom_toTopOf="@id/bottomBar"
             app:layout_constraintStart_toStartOf="parent"
             app:layout_constraintEnd_toEndOf="parent"/>
 
-        <!-- BOTTOM BAR -->
+        <!-- =========================
+             BOTTOM BAR
+        ========================== -->
         <LinearLayout
             android:id="@+id/bottomBar"
             android:layout_width="0dp"
@@ -51,7 +74,7 @@
             app:layout_constraintStart_toStartOf="parent"
             app:layout_constraintEnd_toEndOf="parent">
 
-            <!-- PIN -->
+            <!-- PIN FILTER -->
             <Button
                 android:id="@+id/btnPinned"
                 android:layout_width="0dp"
@@ -59,7 +82,7 @@
                 android:layout_weight="1"
                 android:text="Pinned OFF"/>
 
-            <!-- FAB CENTRALE -->
+            <!-- FAB ADD -->
             <com.google.android.material.floatingactionbutton.FloatingActionButton
                 android:id="@+id/fabAdd"
                 android:layout_width="56dp"
@@ -79,7 +102,5 @@
         </LinearLayout>
 
     </androidx.constraintlayout.widget.ConstraintLayout>
-
-
 
 </androidx.coordinatorlayout.widget.CoordinatorLayout>

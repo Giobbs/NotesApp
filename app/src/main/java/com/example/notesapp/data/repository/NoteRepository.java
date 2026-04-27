@@ -24,17 +24,22 @@ public class NoteRepository {
     // 📌 READ UNIFICATO (FIX PRINCIPALE)
     // =========================
 
-    public LiveData<List<Note>> getNotes(String query, SortType sortType, boolean pinnedOnly) {
+    public LiveData<List<Note>> getNotes(
+            String query,
+            SortType sortType,
+            boolean pinnedOnly,
+            String tag
+    ) {
 
         String q = (query == null || query.trim().isEmpty())
                 ? "%"
                 : "%" + query + "%";
 
         if (pinnedOnly) {
-            return noteDao.searchPinned(q, sortType.name());
+            return noteDao.searchAll(q, sortType.name(), tag);
         }
 
-        return noteDao.search(q, sortType.name());
+        return noteDao.searchAll(q, sortType.name(), tag);
     }
 
     public LiveData<Note> observeById(long id) {
@@ -120,5 +125,9 @@ public class NoteRepository {
             noteDao.deleteById(id);
             if (onComplete != null) onComplete.run();
         });
+    }
+
+    public LiveData<List<Note>> getNotesByTag(String tag) {
+        return noteDao.getByTag(tag);
     }
 }

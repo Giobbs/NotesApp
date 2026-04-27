@@ -10,7 +10,7 @@ import androidx.lifecycle.ViewModelProvider;
 import androidx.recyclerview.widget.LinearLayoutManager;
 import androidx.recyclerview.widget.RecyclerView;
 
-import com.example.notesapp.data.local.Note; // 🔥 MANCAVA
+import com.example.notesapp.data.local.Note;
 import com.example.notesapp.data.local.SortType;
 import com.example.notesapp.ui.main.NoteAdapter;
 import com.example.notesapp.ui.main.NotesViewModel;
@@ -24,9 +24,11 @@ public class MainActivity extends AppCompatActivity {
     private SearchView searchView;
     private Button btnSort;
     private Button btnPinned;
+    private Button btnTagFilter;
     private FloatingActionButton fabAdd;
 
     private boolean pinnedActive = false;
+    private String activeTag = null;
 
     private enum SortState {
         DATE_DESC,
@@ -47,6 +49,7 @@ public class MainActivity extends AppCompatActivity {
         searchView = findViewById(R.id.searchView);
         btnSort = findViewById(R.id.btnSort);
         btnPinned = findViewById(R.id.btnPinned);
+        btnTagFilter = findViewById(R.id.btnTagFilter);
         fabAdd = findViewById(R.id.fabAdd);
 
         RecyclerView recyclerView = findViewById(R.id.recyclerView);
@@ -63,7 +66,9 @@ public class MainActivity extends AppCompatActivity {
         // =========================
         viewModel = new ViewModelProvider(this).get(NotesViewModel.class);
 
+        // =========================
         // LISTENER NOTE
+        // =========================
         adapter.setListener(new NoteAdapter.OnNoteActionListener() {
 
             @Override
@@ -80,18 +85,28 @@ public class MainActivity extends AppCompatActivity {
 
             @Override
             public void onPin(Note note) {
+                boolean newPinned = !note.isPinned();
+                viewModel.setPinned(note.id, newPinned);
+            }
 
-                boolean newPinned = false;
+            @Override
+            public void onAddTag(Note note, String tag) {
 
-                if (note != null) {
-                    newPinned = !note.isPinned(); // oppure note.pinned
+                String current = note.getTags();
+
+                if (current == null || current.isEmpty()) {
+                    note.setTags(tag);
+                } else {
+                    note.setTags(current + "," + tag);
                 }
 
-                viewModel.setPinned(note.id, newPinned);
+                viewModel.update(note);
             }
         });
 
+        // =========================
         // OBSERVE DATA
+        // =========================
         viewModel.getNotes().observe(this, adapter::setNotes);
 
         // =========================
@@ -151,6 +166,43 @@ public class MainActivity extends AppCompatActivity {
             viewModel.setShowPinnedOnly(pinnedActive);
 
             btnPinned.setText(pinnedActive ? "Pinned ON ⭐" : "Pinned OFF");
+        });
+
+        // =========================
+        // TAG FILTER
+        // =========================
+        btnTagFilter.setOnClickListener(v -> {
+
+            android.app.AlertDialog.Builder builder =
+                    new android.app.AlertDialog.Builder(this);
+
+            builder.setTitle("Filtra per tag");
+
+            final android.widget.EditText input =
+                    new android.widget.EditText(this);
+
+            input.setHint("es: android, java, work");
+
+            builder.setView(input);
+
+            builder.setPositiveButton("Filtra", (dialog, which) -> {
+                String tag = input.getText().toString().trim();
+
+                if (tag.isEmpty()) {
+                    viewModel.setTagFilter(null);
+                    btnTagFilter.setText("Tag OFF");
+                } else {
+                    viewModel.setTagFilter(tag);
+                    btnTagFilter.setText("Tag: " + tag);
+                }
+            });
+
+            builder.setNegativeButton("Reset", (dialog, which) -> {
+                viewModel.setTagFilter(null);
+                btnTagFilter.setText("Tags OFF");
+            });
+
+            builder.show();
         });
 
         // =========================

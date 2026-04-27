@@ -1,3 +1,4 @@
+<?xml version="1.0" encoding="utf-8"?>
 <com.google.android.material.card.MaterialCardView
     xmlns:android="http://schemas.android.com/apk/res/android"
     xmlns:app="http://schemas.android.com/apk/res-auto"
@@ -42,6 +43,18 @@
             app:layout_constraintStart_toStartOf="parent"
             app:layout_constraintEnd_toStartOf="@+id/btnDelete"/>
 
+        <!-- TAGS -->
+        <TextView
+            android:id="@+id/tags"
+            android:layout_width="0dp"
+            android:layout_height="wrap_content"
+            android:textSize="12sp"
+            android:textColor="#FF9800"
+            android:layout_marginTop="6dp"
+            app:layout_constraintTop_toBottomOf="@id/content"
+            app:layout_constraintStart_toStartOf="parent"
+            app:layout_constraintEnd_toStartOf="@+id/btnDelete"/>
+
         <!-- UPDATED AT -->
         <TextView
             android:id="@+id/updatedAt"
@@ -50,9 +63,27 @@
             android:textSize="12sp"
             android:textColor="#999999"
             android:layout_marginTop="6dp"
-            app:layout_constraintTop_toBottomOf="@id/content"
+            app:layout_constraintTop_toBottomOf="@id/tags"
             app:layout_constraintStart_toStartOf="parent"
             app:layout_constraintEnd_toStartOf="@+id/btnDelete"/>
+
+        <!-- =========================
+             RIGHT SIDE STACK (FIX)
+        ========================== -->
+
+        <!-- DELETE -->
+        <ImageButton
+            android:id="@+id/btnDelete"
+            android:layout_width="40dp"
+            android:layout_height="40dp"
+            android:background="?attr/selectableItemBackgroundBorderless"
+            android:src="@android:drawable/ic_menu_delete"
+            android:contentDescription="Delete note"
+            app:tint="#E53935"
+            app:layout_constraintTop_toTopOf="parent"
+            app:layout_constraintEnd_toEndOf="parent"/>
+
+        <!-- PIN -->
         <ImageButton
             android:id="@+id/btnPin"
             android:layout_width="40dp"
@@ -63,16 +94,17 @@
             app:tint="#FFC107"
             app:layout_constraintTop_toBottomOf="@id/btnDelete"
             app:layout_constraintEnd_toEndOf="parent"/>
-        <!-- DELETE BUTTON -->
+
+        <!-- ADD TAG -->
         <ImageButton
-            android:id="@+id/btnDelete"
+            android:id="@+id/btnAddTag"
             android:layout_width="40dp"
             android:layout_height="40dp"
             android:background="?attr/selectableItemBackgroundBorderless"
-            android:src="@android:drawable/ic_menu_delete"
-            android:contentDescription="Delete note"
-            app:tint="#E53935"
-            app:layout_constraintTop_toTopOf="parent"
+            android:src="@android:drawable/ic_input_add"
+            android:contentDescription="Add tag"
+            app:tint="#FF9800"
+            app:layout_constraintTop_toBottomOf="@id/btnPin"
             app:layout_constraintEnd_toEndOf="parent"/>
 
     </androidx.constraintlayout.widget.ConstraintLayout>

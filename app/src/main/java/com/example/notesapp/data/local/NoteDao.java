@@ -104,4 +104,19 @@ public interface NoteDao {
             "CASE WHEN :sort = 'DATE_ASC' THEN updatedAt END ASC, " +
             "CASE WHEN :sort = 'DATE_DESC' THEN updatedAt END DESC")
     LiveData<List<Note>> searchPinned(String q, String sort);
+
+    @Query("SELECT * FROM notes WHERE deleted = 0 AND (',' || tags || ',') LIKE '%,' || :tag || ',%'")
+    LiveData<List<Note>> getByTag(String tag);
+
+    @Query("SELECT * FROM notes " +
+            "WHERE deleted = 0 " +
+            "AND (title LIKE :q OR content LIKE :q OR tags LIKE :q) " +
+            "AND (:tag IS NULL OR :tag = '' OR (',' || tags || ',') LIKE '%,' || :tag || ',%') " +
+            "ORDER BY pinned DESC, " +
+            "CASE WHEN :sort = 'TITLE_ASC' THEN title END ASC, " +
+            "CASE WHEN :sort = 'TITLE_DESC' THEN title END DESC, " +
+            "CASE WHEN :sort = 'DATE_ASC' THEN updatedAt END ASC, " +
+            "CASE WHEN :sort = 'DATE_DESC' THEN updatedAt END DESC")
+    LiveData<List<Note>> searchAll(String q, String sort, String tag);
+
 }
