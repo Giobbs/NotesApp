@@ -35,10 +35,6 @@ public class NoteRepository {
                 ? "%"
                 : "%" + query + "%";
 
-        if (pinnedOnly) {
-            return noteDao.searchAll(q, sortType.name(), tag);
-        }
-
         return noteDao.searchAll(q, sortType.name(), tag);
     }
 
@@ -87,9 +83,32 @@ public class NoteRepository {
         });
     }
 
+    // =========================
+    // ✏️ FIX: UPDATE TAGS (NUOVO)
+    // =========================
+    public void updateTags(long noteId, String tags, Runnable onComplete) {
+        executor.execute(() -> {
+            noteDao.updateTags(noteId, tags, System.currentTimeMillis());
+
+            if (onComplete != null) onComplete.run();
+        });
+    }
+
+    // =========================
+    // 🗑 DELETE (soft)
+    // =========================
+
     public void delete(Note note, Runnable onComplete) {
         executor.execute(() -> {
             noteDao.softDelete(note.id, System.currentTimeMillis());
+
+            if (onComplete != null) onComplete.run();
+        });
+    }
+
+    public void deleteById(long id, Runnable onComplete) {
+        executor.execute(() -> {
+            noteDao.deleteById(id);
 
             if (onComplete != null) onComplete.run();
         });
@@ -102,6 +121,7 @@ public class NoteRepository {
     public void setPinned(long id, boolean pinned, Runnable onComplete) {
         executor.execute(() -> {
             noteDao.setPinned(id, pinned, System.currentTimeMillis());
+
             if (onComplete != null) onComplete.run();
         });
     }
@@ -109,6 +129,7 @@ public class NoteRepository {
     public void setArchived(long id, boolean archived, Runnable onComplete) {
         executor.execute(() -> {
             noteDao.setArchived(id, archived, System.currentTimeMillis());
+
             if (onComplete != null) onComplete.run();
         });
     }
@@ -116,16 +137,14 @@ public class NoteRepository {
     public void restore(long id, Runnable onComplete) {
         executor.execute(() -> {
             noteDao.restore(id, System.currentTimeMillis());
+
             if (onComplete != null) onComplete.run();
         });
     }
 
-    public void deleteById(long id, Runnable onComplete) {
-        executor.execute(() -> {
-            noteDao.deleteById(id);
-            if (onComplete != null) onComplete.run();
-        });
-    }
+    // =========================
+    // 📌 TAG QUERY
+    // =========================
 
     public LiveData<List<Note>> getNotesByTag(String tag) {
         return noteDao.getByTag(tag);

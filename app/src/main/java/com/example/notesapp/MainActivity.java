@@ -43,9 +43,6 @@ public class MainActivity extends AppCompatActivity {
         super.onCreate(savedInstanceState);
         setContentView(R.layout.activity_main);
 
-        // =========================
-        // VIEW INIT
-        // =========================
         searchView = findViewById(R.id.searchView);
         btnSort = findViewById(R.id.btnSort);
         btnPinned = findViewById(R.id.btnPinned);
@@ -54,16 +51,10 @@ public class MainActivity extends AppCompatActivity {
 
         RecyclerView recyclerView = findViewById(R.id.recyclerView);
 
-        // =========================
-        // RECYCLER
-        // =========================
         adapter = new NoteAdapter();
         recyclerView.setLayoutManager(new LinearLayoutManager(this));
         recyclerView.setAdapter(adapter);
 
-        // =========================
-        // VIEWMODEL
-        // =========================
         viewModel = new ViewModelProvider(this).get(NotesViewModel.class);
 
         // =========================
@@ -93,20 +84,36 @@ public class MainActivity extends AppCompatActivity {
             public void onAddTag(Note note, String tag) {
 
                 String current = note.getTags();
+                String updatedTags;
 
                 if (current == null || current.isEmpty()) {
-                    note.setTags(tag);
+                    updatedTags = tag;
                 } else {
-                    note.setTags(current + "," + tag);
+                    updatedTags = current + "," + tag;
                 }
 
-                viewModel.update(note);
+                viewModel.updateTags(note.id, updatedTags);
+            }
+
+            // =========================
+            // SHARE
+            // =========================
+            @Override
+            public void onShare(Note note) {
+
+                String textToShare =
+                        note.getTitle() + "\n\n" + note.getContent();
+
+                Intent intent = new Intent(Intent.ACTION_SEND);
+                intent.setType("text/plain");
+                intent.putExtra(Intent.EXTRA_TEXT, textToShare);
+
+                startActivity(
+                        Intent.createChooser(intent, "Condividi nota")
+                );
             }
         });
 
-        // =========================
-        // OBSERVE DATA
-        // =========================
         viewModel.getNotes().observe(this, adapter::setNotes);
 
         // =========================
@@ -124,7 +131,12 @@ public class MainActivity extends AppCompatActivity {
 
             @Override
             public boolean onQueryTextChange(String newText) {
-                viewModel.setSearchQuery(clean(newText));
+
+                String q = clean(newText);
+
+                if (q.length() < 2 && !q.isEmpty()) return true;
+
+                viewModel.setSearchQuery(q);
                 return true;
             }
         });
@@ -186,6 +198,7 @@ public class MainActivity extends AppCompatActivity {
             builder.setView(input);
 
             builder.setPositiveButton("Filtra", (dialog, which) -> {
+
                 String tag = input.getText().toString().trim();
 
                 if (tag.isEmpty()) {

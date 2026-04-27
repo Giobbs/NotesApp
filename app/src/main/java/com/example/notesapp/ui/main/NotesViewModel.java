@@ -14,6 +14,7 @@ import com.example.notesapp.data.local.SortType;
 import com.example.notesapp.data.repository.NoteRepository;
 
 import java.util.List;
+
 public class NotesViewModel extends AndroidViewModel {
 
     private final NoteRepository repository;
@@ -21,13 +22,10 @@ public class NotesViewModel extends AndroidViewModel {
     private final MutableLiveData<Boolean> showPinnedOnly = new MutableLiveData<>(false);
     private final MutableLiveData<String> searchQuery = new MutableLiveData<>("");
     private final MutableLiveData<SortType> sortType = new MutableLiveData<>(SortType.DATE_DESC);
-
-    private final MediatorLiveData<List<Note>> visibleNotes = new MediatorLiveData<>();
-
-    private LiveData<List<Note>> currentSource;
-
     private final MutableLiveData<String> tagFilter = new MutableLiveData<>(null);
 
+    private final MediatorLiveData<List<Note>> visibleNotes = new MediatorLiveData<>();
+    private LiveData<List<Note>> currentSource;
 
     public NotesViewModel(@NonNull Application application) {
         super(application);
@@ -40,6 +38,7 @@ public class NotesViewModel extends AndroidViewModel {
         visibleNotes.addSource(searchQuery, v -> refresh());
         visibleNotes.addSource(sortType, v -> refresh());
         visibleNotes.addSource(tagFilter, v -> refresh());
+
         refresh();
     }
 
@@ -64,6 +63,7 @@ public class NotesViewModel extends AndroidViewModel {
         currentSource = newSource;
         visibleNotes.addSource(currentSource, visibleNotes::setValue);
     }
+
     // =========================
     // API
     // =========================
@@ -73,7 +73,7 @@ public class NotesViewModel extends AndroidViewModel {
     }
 
     public void setSearchQuery(String query) {
-        searchQuery.setValue(query);
+        searchQuery.setValue(query != null ? query.trim() : "");
     }
 
     public void setSortType(SortType type) {
@@ -88,7 +88,14 @@ public class NotesViewModel extends AndroidViewModel {
         return showPinnedOnly;
     }
 
+    public void setTagFilter(String tag) {
+        tagFilter.setValue(tag != null && tag.trim().isEmpty() ? null : tag);
+    }
+
+    // =========================
     // CRUD
+    // =========================
+
     public void delete(Note note, Runnable onDone) {
         repository.delete(note, onDone);
     }
@@ -109,8 +116,10 @@ public class NotesViewModel extends AndroidViewModel {
         repository.setPinned(id, pinned, null);
     }
 
-
-    public void setTagFilter(String tag) {
-        tagFilter.setValue(tag);
+    // =========================
+    // FIX: TAG UPDATE (per MainActivity)
+    // =========================
+    public void updateTags(long noteId, String tags) {
+        repository.updateTags(noteId, tags, null);
     }
 }

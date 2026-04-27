@@ -27,7 +27,7 @@ public class NoteAdapter extends RecyclerView.Adapter<NoteAdapter.NoteViewHolder
         void onNoteClick(Note note);
         void onDelete(Note note);
         void onPin(Note note);
-
+        void onShare(Note note);
         void onAddTag(Note note, String tag);
     }
 
@@ -182,6 +182,17 @@ public class NoteAdapter extends RecyclerView.Adapter<NoteAdapter.NoteViewHolder
                             ? ContextCompat.getColor(itemView.getContext(), android.R.color.holo_orange_light)
                             : ContextCompat.getColor(itemView.getContext(), android.R.color.transparent)
             );
+
+            // =========================
+            //          SHARE
+            // =========================
+            ImageButton share = itemView.findViewById(R.id.btnShare);
+
+            if (share != null) {
+                share.setOnClickListener(v -> {
+                    if (listener != null) listener.onShare(note);
+                });
+            }
         }
     }
 }

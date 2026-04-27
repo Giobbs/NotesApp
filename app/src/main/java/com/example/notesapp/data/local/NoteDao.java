@@ -119,4 +119,6 @@ public interface NoteDao {
             "CASE WHEN :sort = 'DATE_DESC' THEN updatedAt END DESC")
     LiveData<List<Note>> searchAll(String q, String sort, String tag);
 
+    @Query("UPDATE notes SET tags = :tags, updatedAt = :timestamp WHERE id = :id")
+    int updateTags(long id, String tags, long timestamp);
 }
