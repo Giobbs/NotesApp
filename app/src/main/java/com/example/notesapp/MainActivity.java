@@ -10,7 +10,6 @@ import androidx.lifecycle.ViewModelProvider;
 import androidx.recyclerview.widget.LinearLayoutManager;
 import androidx.recyclerview.widget.RecyclerView;
 
-import com.example.notesapp.data.local.Note;
 import com.example.notesapp.data.local.SortType;
 import com.example.notesapp.ui.main.NoteAdapter;
 import com.example.notesapp.ui.main.NotesViewModel;
@@ -25,10 +24,10 @@ public class MainActivity extends AppCompatActivity {
     private Button btnSort;
     private Button btnPinned;
     private Button btnTagFilter;
+    private Button btnImportExport;
     private FloatingActionButton fabAdd;
 
     private boolean pinnedActive = false;
-    private String activeTag = null;
 
     private enum SortState {
         DATE_DESC,
@@ -43,10 +42,14 @@ public class MainActivity extends AppCompatActivity {
         super.onCreate(savedInstanceState);
         setContentView(R.layout.activity_main);
 
+        // =========================
+        // INIT VIEW (SAFE ORDER)
+        // =========================
         searchView = findViewById(R.id.searchView);
         btnSort = findViewById(R.id.btnSort);
         btnPinned = findViewById(R.id.btnPinned);
         btnTagFilter = findViewById(R.id.btnTagFilter);
+        btnImportExport = findViewById(R.id.btnImportExport);
         fabAdd = findViewById(R.id.fabAdd);
 
         RecyclerView recyclerView = findViewById(R.id.recyclerView);
@@ -58,62 +61,16 @@ public class MainActivity extends AppCompatActivity {
         viewModel = new ViewModelProvider(this).get(NotesViewModel.class);
 
         // =========================
-        // LISTENER NOTE
+        // IMPORT / EXPORT (FIXED)
         // =========================
-        adapter.setListener(new NoteAdapter.OnNoteActionListener() {
-
-            @Override
-            public void onNoteClick(Note note) {
-                Intent intent = new Intent(MainActivity.this, EditNoteActivity.class);
-                intent.putExtra(EditNoteActivity.EXTRA_NOTE_ID, note.id);
-                startActivity(intent);
-            }
-
-            @Override
-            public void onDelete(Note note) {
-                viewModel.delete(note, null);
-            }
-
-            @Override
-            public void onPin(Note note) {
-                boolean newPinned = !note.isPinned();
-                viewModel.setPinned(note.id, newPinned);
-            }
-
-            @Override
-            public void onAddTag(Note note, String tag) {
-
-                String current = note.getTags();
-                String updatedTags;
-
-                if (current == null || current.isEmpty()) {
-                    updatedTags = tag;
-                } else {
-                    updatedTags = current + "," + tag;
-                }
-
-                viewModel.updateTags(note.id, updatedTags);
-            }
-
-            // =========================
-            // SHARE
-            // =========================
-            @Override
-            public void onShare(Note note) {
-
-                String textToShare =
-                        note.getTitle() + "\n\n" + note.getContent();
-
-                Intent intent = new Intent(Intent.ACTION_SEND);
-                intent.setType("text/plain");
-                intent.putExtra(Intent.EXTRA_TEXT, textToShare);
-
-                startActivity(
-                        Intent.createChooser(intent, "Condividi nota")
-                );
-            }
+        btnImportExport.setOnClickListener(v -> {
+            Intent intent = new Intent(MainActivity.this, ImportExportActivity.class);
+            startActivity(intent);
         });
 
+        // =========================
+        // OBSERVE
+        // =========================
         viewModel.getNotes().observe(this, adapter::setNotes);
 
         // =========================
@@ -133,7 +90,6 @@ public class MainActivity extends AppCompatActivity {
             public boolean onQueryTextChange(String newText) {
 
                 String q = clean(newText);
-
                 if (q.length() < 2 && !q.isEmpty()) return true;
 
                 viewModel.setSearchQuery(q);
@@ -160,7 +116,6 @@ public class MainActivity extends AppCompatActivity {
                     btnSort.setText("Titolo");
                     break;
 
-                case TITLE:
                 default:
                     sortState = SortState.DATE_DESC;
                     viewModel.setSortType(SortType.DATE_DESC);

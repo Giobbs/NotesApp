@@ -4,6 +4,7 @@ import android.text.format.DateUtils;
 import android.view.LayoutInflater;
 import android.view.View;
 import android.view.ViewGroup;
+import android.widget.CheckBox;
 import android.widget.ImageButton;
 import android.widget.TextView;
 
@@ -16,13 +17,45 @@ import com.example.notesapp.data.local.Note;
 import com.google.android.material.card.MaterialCardView;
 
 import java.util.ArrayList;
+import java.util.HashSet;
 import java.util.List;
+import java.util.Set;
 
 public class NoteAdapter extends RecyclerView.Adapter<NoteAdapter.NoteViewHolder> {
 
+    // =========================
+    // DATA
+    // =========================
     private List<Note> notes = new ArrayList<>();
     private OnNoteActionListener listener;
 
+    // =========================
+    // SELECTION (IMPORT/EXPORT)
+    // =========================
+    private Set<Long> selectedNotes = new HashSet<>();
+
+    // =========================
+    // MODE
+    // =========================
+    public enum Mode {
+        NORMAL,
+        SELECTABLE
+    }
+
+    private Mode mode = Mode.NORMAL;
+
+    public void setMode(Mode mode) {
+        this.mode = mode;
+        notifyDataSetChanged();
+    }
+
+    public Set<Long> getSelectedNotes() {
+        return selectedNotes;
+    }
+
+    // =========================
+    // LISTENER
+    // =========================
     public interface OnNoteActionListener {
         void onNoteClick(Note note);
         void onDelete(Note note);
@@ -35,11 +68,17 @@ public class NoteAdapter extends RecyclerView.Adapter<NoteAdapter.NoteViewHolder
         this.listener = listener;
     }
 
+    // =========================
+    // DATA UPDATE
+    // =========================
     public void setNotes(List<Note> newNotes) {
-        this.notes = newNotes != null ? newNotes : new ArrayList<>();
+        this.notes = (newNotes != null) ? newNotes : new ArrayList<>();
         notifyDataSetChanged();
     }
 
+    // =========================
+    // ADAPTER
+    // =========================
     @NonNull
     @Override
     public NoteViewHolder onCreateViewHolder(@NonNull ViewGroup parent, int viewType) {
@@ -50,7 +89,7 @@ public class NoteAdapter extends RecyclerView.Adapter<NoteAdapter.NoteViewHolder
 
     @Override
     public void onBindViewHolder(@NonNull NoteViewHolder holder, int position) {
-        holder.bind(notes.get(position), listener);
+        holder.bind(notes.get(position), listener, mode, selectedNotes);
     }
 
     @Override
@@ -64,8 +103,9 @@ public class NoteAdapter extends RecyclerView.Adapter<NoteAdapter.NoteViewHolder
     static class NoteViewHolder extends RecyclerView.ViewHolder {
 
         TextView title, content, updatedAt, tags;
-        ImageButton delete, pin;
+        ImageButton delete, pin, share;
         MaterialCardView card;
+        CheckBox checkSelect;
 
         public NoteViewHolder(@NonNull View itemView) {
             super(itemView);
@@ -77,30 +117,28 @@ public class NoteAdapter extends RecyclerView.Adapter<NoteAdapter.NoteViewHolder
 
             delete = itemView.findViewById(R.id.btnDelete);
             pin = itemView.findViewById(R.id.btnPin);
+            share = itemView.findViewById(R.id.btnShare);
 
             card = itemView.findViewById(R.id.cardNote);
+
+            checkSelect = itemView.findViewById(R.id.checkSelect);
         }
 
-        void bind(Note note, OnNoteActionListener listener) {
+        void bind(
+                Note note,
+                OnNoteActionListener listener,
+                Mode mode,
+                Set<Long> selectedNotes
+        ) {
 
             if (note == null) return;
 
+            // =========================
+            // BASIC DATA
+            // =========================
             title.setText(note.getTitle());
             content.setText(note.getContent());
 
-            // =========================
-            // TAGS (CSV -> UI)
-            // =========================
-            if (note.getTags() != null && !note.getTags().isEmpty()) {
-                tags.setVisibility(View.VISIBLE);
-                tags.setText(note.getTags().replace(",", " • "));
-            } else {
-                tags.setVisibility(View.GONE);
-            }
-
-            // =========================
-            // TIME
-            // =========================
             updatedAt.setText(
                     DateUtils.getRelativeTimeSpanString(
                             note.getUpdatedAt(),
@@ -110,64 +148,59 @@ public class NoteAdapter extends RecyclerView.Adapter<NoteAdapter.NoteViewHolder
             );
 
             // =========================
-            // CLICK NOTE
+            // TAGS
+            // =========================
+            if (note.getTags() != null && !note.getTags().isEmpty()) {
+                tags.setVisibility(View.VISIBLE);
+                tags.setText(note.getTags().replace(",", " • "));
+            } else {
+                tags.setVisibility(View.GONE);
+            }
+
+            // =========================
+            // CLICK
             // =========================
             card.setOnClickListener(v -> {
                 if (listener != null) listener.onNoteClick(note);
             });
 
-            // =========================
-            // DELETE
-            // =========================
             delete.setOnClickListener(v -> {
                 if (listener != null) listener.onDelete(note);
             });
 
-            // =========================
-            // PIN
-            // =========================
             pin.setOnClickListener(v -> {
                 if (listener != null) listener.onPin(note);
             });
 
+            share.setOnClickListener(v -> {
+                if (listener != null) listener.onShare(note);
+            });
+
             // =========================
-            // ⭐ ADD TAG
+            // SELECTABLE MODE
             // =========================
-            ImageButton addTag = itemView.findViewById(R.id.btnAddTag);
+            if (mode == Mode.SELECTABLE) {
 
-            if (addTag != null) {
-                addTag.setOnClickListener(v -> {
+                checkSelect.setVisibility(View.VISIBLE);
 
-                    if (listener == null) return;
+                checkSelect.setOnCheckedChangeListener(null);
+                checkSelect.setChecked(selectedNotes.contains(note.id));
 
-                    android.app.AlertDialog.Builder builder =
-                            new android.app.AlertDialog.Builder(v.getContext());
-
-                    android.widget.EditText input =
-                            new android.widget.EditText(v.getContext());
-
-                    input.setHint("es: android");
-
-                    builder.setTitle("Aggiungi tag");
-                    builder.setView(input);
-
-                    builder.setPositiveButton("OK", (dialog, which) -> {
-
-                        String newTag = input.getText().toString().trim();
-
-                        if (!newTag.isEmpty()) {
-                            listener.onAddTag(note, newTag);
-                        }
-                    });
-
-                    builder.setNegativeButton("Annulla", null);
-
-                    builder.show();
+                checkSelect.setOnCheckedChangeListener((buttonView, isChecked) -> {
+                    if (isChecked) {
+                        selectedNotes.add(note.id);
+                    } else {
+                        selectedNotes.remove(note.id);
+                    }
                 });
+
+            } else {
+                checkSelect.setVisibility(View.GONE);
+                checkSelect.setChecked(false);
             }
 
             // =========================
-            // UI STATE PIN
+            // PIN UI
             // =========================
             boolean pinned = note.isPinned();
 
@@ -182,17 +215,6 @@ public class NoteAdapter extends RecyclerView.Adapter<NoteAdapter.NoteViewHolder
                             ? ContextCompat.getColor(itemView.getContext(), android.R.color.holo_orange_light)
                             : ContextCompat.getColor(itemView.getContext(), android.R.color.transparent)
             );
-
-            // =========================
-            //          SHARE
-            // =========================
-            ImageButton share = itemView.findViewById(R.id.btnShare);
-
-            if (share != null) {
-                share.setOnClickListener(v -> {
-                    if (listener != null) listener.onShare(note);
-                });
-            }
         }
     }
 }

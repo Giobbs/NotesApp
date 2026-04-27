@@ -121,4 +121,8 @@ public interface NoteDao {
 
     @Query("UPDATE notes SET tags = :tags, updatedAt = :timestamp WHERE id = :id")
     int updateTags(long id, String tags, long timestamp);
+
+    @Query("SELECT * FROM notes")
+    List<Note> getAllNotesSync();
+
 }
