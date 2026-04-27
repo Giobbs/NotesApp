@@ -21,7 +21,7 @@ public class NoteRepository {
     }
 
     // =========================
-    // 📌 READ UNIFICATO (FIX PRINCIPALE)
+    // 📌 READ UNIFICATO
     // =========================
 
     public LiveData<List<Note>> getNotes(

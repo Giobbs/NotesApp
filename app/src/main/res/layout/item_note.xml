@@ -68,7 +68,7 @@
             app:layout_constraintEnd_toStartOf="@+id/btnDelete"/>
 
         <!-- =========================
-             RIGHT SIDE STACK (FIX)
+             RIGHT SIDE STACK
         ========================== -->
 
         <!-- DELETE -->

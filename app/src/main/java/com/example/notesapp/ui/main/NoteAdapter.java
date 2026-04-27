@@ -131,7 +131,7 @@ public class NoteAdapter extends RecyclerView.Adapter<NoteAdapter.NoteViewHolder
             });
 
             // =========================
-            // ⭐ ADD TAG (MANCAVA → FIX PRINCIPALE)
+            // ⭐ ADD TAG
             // =========================
             ImageButton addTag = itemView.findViewById(R.id.btnAddTag);
 
