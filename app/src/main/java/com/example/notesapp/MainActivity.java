@@ -10,6 +10,7 @@ import androidx.lifecycle.ViewModelProvider;
 import androidx.recyclerview.widget.LinearLayoutManager;
 import androidx.recyclerview.widget.RecyclerView;
 
+import com.example.notesapp.data.local.Note;
 import com.example.notesapp.data.local.SortType;
 import com.example.notesapp.ui.main.NoteAdapter;
 import com.example.notesapp.ui.main.NotesViewModel;
@@ -42,40 +43,78 @@ public class MainActivity extends AppCompatActivity {
         super.onCreate(savedInstanceState);
         setContentView(R.layout.activity_main);
 
-        // =========================
-        // INIT VIEW (SAFE ORDER)
-        // =========================
+        initViews();
+        setupRecycler();
+        setupViewModel();
+        setupAdapter();
+        setupActions();
+    }
+
+    private void initViews() {
         searchView = findViewById(R.id.searchView);
         btnSort = findViewById(R.id.btnSort);
         btnPinned = findViewById(R.id.btnPinned);
         btnTagFilter = findViewById(R.id.btnTagFilter);
         btnImportExport = findViewById(R.id.btnImportExport);
         fabAdd = findViewById(R.id.fabAdd);
+    }
 
+    private void setupRecycler() {
         RecyclerView recyclerView = findViewById(R.id.recyclerView);
 
         adapter = new NoteAdapter();
         recyclerView.setLayoutManager(new LinearLayoutManager(this));
         recyclerView.setAdapter(adapter);
+    }
 
+    private void setupViewModel() {
         viewModel = new ViewModelProvider(this).get(NotesViewModel.class);
-
-        // =========================
-        // IMPORT / EXPORT (FIXED)
-        // =========================
-        btnImportExport.setOnClickListener(v -> {
-            Intent intent = new Intent(MainActivity.this, ImportExportActivity.class);
-            startActivity(intent);
-        });
-
-        // =========================
-        // OBSERVE
-        // =========================
         viewModel.getNotes().observe(this, adapter::setNotes);
+    }
 
-        // =========================
-        // SEARCH
-        // =========================
+    private void setupAdapter() {
+
+        adapter.setListener(new NoteAdapter.OnNoteActionListener() {
+
+            @Override
+            public void onNoteClick(Note note) {
+                Intent intent = new Intent(MainActivity.this, EditNoteActivity.class);
+                intent.putExtra(EditNoteActivity.EXTRA_NOTE_ID, note.id);
+                startActivity(intent);
+            }
+
+            @Override
+            public void onDelete(Note note) {
+                viewModel.delete(note, null);
+            }
+
+            @Override
+            public void onPin(Note note) {
+                viewModel.setPinned(note.id, !note.isPinned());
+            }
+
+            @Override
+            public void onShare(Note note) {
+                Intent shareIntent = new Intent(Intent.ACTION_SEND);
+                shareIntent.setType("text/plain");
+                shareIntent.putExtra(Intent.EXTRA_TEXT,
+                        note.title + "\n\n" + note.content);
+                startActivity(Intent.createChooser(shareIntent, "Condividi nota"));
+            }
+
+            @Override
+            public void onAddTag(Note note, String tag) {
+                viewModel.updateTags(note.id, tag);
+            }
+        });
+    }
+
+    private void setupActions() {
+
+        btnImportExport.setOnClickListener(v ->
+                startActivity(new Intent(this, ImportExportActivity.class))
+        );
+
         searchView.setIconifiedByDefault(false);
 
         searchView.setOnQueryTextListener(new SearchView.OnQueryTextListener() {
@@ -88,18 +127,11 @@ public class MainActivity extends AppCompatActivity {
 
             @Override
             public boolean onQueryTextChange(String newText) {
-
-                String q = clean(newText);
-                if (q.length() < 2 && !q.isEmpty()) return true;
-
-                viewModel.setSearchQuery(q);
+                viewModel.setSearchQuery(clean(newText));
                 return true;
             }
         });
 
-        // =========================
-        // SORT
-        // =========================
         btnSort.setOnClickListener(v -> {
 
             switch (sortState) {
@@ -124,9 +156,6 @@ public class MainActivity extends AppCompatActivity {
             }
         });
 
-        // =========================
-        // PIN FILTER
-        // =========================
         btnPinned.setOnClickListener(v -> {
 
             pinnedActive = !pinnedActive;
@@ -136,7 +165,7 @@ public class MainActivity extends AppCompatActivity {
         });
 
         // =========================
-        // TAG FILTER
+        // 🔥 TAG FILTER FIX DEFINITIVO
         // =========================
         btnTagFilter.setOnClickListener(v -> {
 
@@ -154,10 +183,10 @@ public class MainActivity extends AppCompatActivity {
 
             builder.setPositiveButton("Filtra", (dialog, which) -> {
 
-                String tag = input.getText().toString().trim();
+                String tag = clean(input.getText().toString());
 
                 if (tag.isEmpty()) {
-                    viewModel.setTagFilter(null);
+                    viewModel.setTagFilter(null); // 🔥 SOLO NULL = OFF
                     btnTagFilter.setText("Tag OFF");
                 } else {
                     viewModel.setTagFilter(tag);
@@ -166,16 +195,13 @@ public class MainActivity extends AppCompatActivity {
             });
 
             builder.setNegativeButton("Reset", (dialog, which) -> {
-                viewModel.setTagFilter(null);
+                viewModel.setTagFilter(null); // 🔥 FIX
                 btnTagFilter.setText("Tags OFF");
             });
 
             builder.show();
         });
 
-        // =========================
-        // ADD NOTE
-        // =========================
         fabAdd.setOnClickListener(v ->
                 startActivity(new Intent(this, AddNoteActivity.class))
         );

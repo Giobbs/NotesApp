@@ -1,10 +1,12 @@
 package com.example.notesapp.ui.main;
 
+import android.app.AlertDialog;
 import android.text.format.DateUtils;
 import android.view.LayoutInflater;
 import android.view.View;
 import android.view.ViewGroup;
 import android.widget.CheckBox;
+import android.widget.EditText;
 import android.widget.ImageButton;
 import android.widget.TextView;
 
@@ -23,20 +25,11 @@ import java.util.Set;
 
 public class NoteAdapter extends RecyclerView.Adapter<NoteAdapter.NoteViewHolder> {
 
-    // =========================
-    // DATA
-    // =========================
     private List<Note> notes = new ArrayList<>();
     private OnNoteActionListener listener;
 
-    // =========================
-    // SELECTION (IMPORT/EXPORT)
-    // =========================
     private Set<Long> selectedNotes = new HashSet<>();
 
-    // =========================
-    // MODE
-    // =========================
     public enum Mode {
         NORMAL,
         SELECTABLE
@@ -53,9 +46,6 @@ public class NoteAdapter extends RecyclerView.Adapter<NoteAdapter.NoteViewHolder
         return selectedNotes;
     }
 
-    // =========================
-    // LISTENER
-    // =========================
     public interface OnNoteActionListener {
         void onNoteClick(Note note);
         void onDelete(Note note);
@@ -68,17 +58,11 @@ public class NoteAdapter extends RecyclerView.Adapter<NoteAdapter.NoteViewHolder
         this.listener = listener;
     }
 
-    // =========================
-    // DATA UPDATE
-    // =========================
     public void setNotes(List<Note> newNotes) {
         this.notes = (newNotes != null) ? newNotes : new ArrayList<>();
         notifyDataSetChanged();
     }
 
-    // =========================
-    // ADAPTER
-    // =========================
     @NonNull
     @Override
     public NoteViewHolder onCreateViewHolder(@NonNull ViewGroup parent, int viewType) {
@@ -103,7 +87,7 @@ public class NoteAdapter extends RecyclerView.Adapter<NoteAdapter.NoteViewHolder
     static class NoteViewHolder extends RecyclerView.ViewHolder {
 
         TextView title, content, updatedAt, tags;
-        ImageButton delete, pin, share;
+        ImageButton delete, pin, share, addTag;
         MaterialCardView card;
         CheckBox checkSelect;
 
@@ -118,9 +102,9 @@ public class NoteAdapter extends RecyclerView.Adapter<NoteAdapter.NoteViewHolder
             delete = itemView.findViewById(R.id.btnDelete);
             pin = itemView.findViewById(R.id.btnPin);
             share = itemView.findViewById(R.id.btnShare);
+            addTag = itemView.findViewById(R.id.btnAddTag);
 
             card = itemView.findViewById(R.id.cardNote);
-
             checkSelect = itemView.findViewById(R.id.checkSelect);
         }
 
@@ -158,7 +142,7 @@ public class NoteAdapter extends RecyclerView.Adapter<NoteAdapter.NoteViewHolder
             }
 
             // =========================
-            // CLICK
+            // CLICK NOTE
             // =========================
             card.setOnClickListener(v -> {
                 if (listener != null) listener.onNoteClick(note);
@@ -177,21 +161,48 @@ public class NoteAdapter extends RecyclerView.Adapter<NoteAdapter.NoteViewHolder
             });
 
             // =========================
-            // SELECTABLE MODE
+            // ADD TAG (🔥 FIX PRINCIPALE)
+            // =========================
+            addTag.setOnClickListener(v -> {
+
+                if (listener == null) return;
+
+                AlertDialog.Builder builder =
+                        new AlertDialog.Builder(itemView.getContext());
+
+                builder.setTitle("Aggiungi tag");
+
+                EditText input = new EditText(itemView.getContext());
+                input.setHint("es: android, work");
+
+                builder.setView(input);
+
+                builder.setPositiveButton("OK", (dialog, which) -> {
+
+                    String tag = input.getText().toString().trim();
+
+                    if (!tag.isEmpty()) {
+                        listener.onAddTag(note, tag);
+                    }
+                });
+
+                builder.setNegativeButton("Annulla", null);
+
+                builder.show();
+            });
+
+            // =========================
+            // SELECT MODE
             // =========================
             if (mode == Mode.SELECTABLE) {
 
                 checkSelect.setVisibility(View.VISIBLE);
-
                 checkSelect.setOnCheckedChangeListener(null);
                 checkSelect.setChecked(selectedNotes.contains(note.id));
 
                 checkSelect.setOnCheckedChangeListener((buttonView, isChecked) -> {
-                    if (isChecked) {
-                        selectedNotes.add(note.id);
-                    } else {
-                        selectedNotes.remove(note.id);
-                    }
+                    if (isChecked) selectedNotes.add(note.id);
+                    else selectedNotes.remove(note.id);
                 });
 
             } else {
