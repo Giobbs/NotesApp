@@ -2,8 +2,11 @@ package com.example.notesapp;
 
 import android.content.Intent;
 import android.os.Bundle;
+import android.os.Handler;
+import android.os.Looper;
 
 import androidx.appcompat.app.AppCompatActivity;
+import androidx.appcompat.widget.SearchView;
 import androidx.lifecycle.ViewModelProvider;
 import androidx.recyclerview.widget.LinearLayoutManager;
 import androidx.recyclerview.widget.RecyclerView;
@@ -16,17 +19,27 @@ import com.google.android.material.snackbar.Snackbar;
 
 public class MainActivity extends AppCompatActivity {
 
+    private static final long DEBOUNCE_MS = 300;
     private NotesViewModel viewModel;
     private NoteAdapter adapter;
+
+    private final Handler handler = new Handler(Looper.getMainLooper());
+    private Runnable searchRunnable;
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
         setContentView(R.layout.activity_main);
 
+        // =========================
+        // VIEW
+        // =========================
         FloatingActionButton fabAdd = findViewById(R.id.fabAdd);
         RecyclerView recyclerView = findViewById(R.id.recyclerView);
-
+        SearchView searchView = findViewById(R.id.searchView);
+        searchView.setIconifiedByDefault(false);
+        searchView.setSubmitButtonEnabled(false);
+        searchView.clearFocus();
         // =========================
         // RECYCLER
         // =========================
@@ -35,12 +48,50 @@ public class MainActivity extends AppCompatActivity {
         recyclerView.setAdapter(adapter);
 
         // =========================
-        // VIEWMODEL
+        //         VIEWMODEL
         // =========================
         viewModel = new ViewModelProvider(this).get(NotesViewModel.class);
 
-        viewModel.notes().observe(this, notes -> {
+        viewModel.getNotes().observe(this, notes -> {
             adapter.setNotes(notes);
+        });
+
+        // =========================
+        //          SEARCH
+        // =========================
+        searchView.setIconifiedByDefault(false);
+        searchView.setQueryHint("Cerca note...");
+        searchView.setSubmitButtonEnabled(false);
+
+        searchView.setOnQueryTextListener(new SearchView.OnQueryTextListener() {
+
+            @Override
+            public boolean onQueryTextSubmit(String query) {
+                viewModel.setSearchQuery(query);
+                return true;
+            }
+
+            @Override
+            public boolean onQueryTextChange(String newText) {
+
+                setSearchingState(!newText.isEmpty(), recyclerView);
+
+                handler.removeCallbacks(searchRunnable);
+
+                searchRunnable = () -> {
+                    viewModel.setSearchQuery(newText.trim());
+                };
+
+                handler.postDelayed(searchRunnable, DEBOUNCE_MS);
+
+                return true;
+            }
+        });
+
+        searchView.setOnCloseListener(() -> {
+            viewModel.setSearchQuery("");
+            setSearchingState(false, recyclerView);
+            return false;
         });
 
         // =========================
@@ -58,12 +109,8 @@ public class MainActivity extends AppCompatActivity {
 
             @Override
             public void onNoteClick(Note note) {
-                android.util.Log.d("DEBUG_CLICK", "CLICK NOTE ID = " + note.id);
-
                 Intent intent = new Intent(MainActivity.this, EditNoteActivity.class);
                 intent.putExtra(EditNoteActivity.EXTRA_NOTE_ID, note.id);
-
-                android.util.Log.d("DEBUG_CLICK", "START ACTIVITY");
                 startActivity(intent);
             }
 
@@ -80,5 +127,10 @@ public class MainActivity extends AppCompatActivity {
         });
     }
 
-
+    private void setSearchingState(boolean active, RecyclerView recyclerView) {
+        recyclerView.animate()
+                .alpha(active ? 0.6f : 1f)
+                .setDuration(150)
+                .start();
+    }
 }

@@ -8,7 +8,6 @@ import androidx.lifecycle.LiveData;
 import androidx.lifecycle.MutableLiveData;
 import androidx.lifecycle.Transformations;
 
-
 import com.example.notesapp.data.local.AppDatabase;
 import com.example.notesapp.data.local.Note;
 import com.example.notesapp.data.repository.NoteRepository;
@@ -22,30 +21,29 @@ public class NotesViewModel extends AndroidViewModel {
     private final MutableLiveData<String> searchQuery = new MutableLiveData<>("");
     private final MutableLiveData<Boolean> orderByDateDesc = new MutableLiveData<>(true);
 
+    private final LiveData<List<Note>> visibleNotes;
+
     public NotesViewModel(@NonNull Application application) {
         super(application);
 
         repository = new NoteRepository(
                 AppDatabase.getInstance(application).noteDao()
         );
+
+        visibleNotes = Transformations.switchMap(searchQuery, query ->
+                Transformations.switchMap(orderByDateDesc, desc -> {
+
+                    return repository.search(query, desc);
+                })
+        );
     }
 
-    // ===== LISTA BASE =====
-    public LiveData<List<Note>> notes() {
-        return repository.observeAll();
+    // ===== UI LIST =====
+    public LiveData<List<Note>> getNotes() {
+        return visibleNotes;
     }
 
     // ===== SEARCH =====
-    public LiveData<List<Note>> searchResults() {
-        return Transformations.switchMap(searchQuery, query -> {
-            if (query == null || query.trim().isEmpty()) {
-                return repository.observeAll();
-            }
-            return repository.search(query);
-        });
-    }
-
-    // ===== STATE UPDATE =====
     public void setSearchQuery(String query) {
         searchQuery.setValue(query);
     }
@@ -54,7 +52,7 @@ public class NotesViewModel extends AndroidViewModel {
         return searchQuery;
     }
 
-    // ===== ORDER STATE (base semplice) =====
+    // ===== ORDER =====
     public void toggleOrder() {
         Boolean current = orderByDateDesc.getValue();
         orderByDateDesc.setValue(current == null || !current);
@@ -64,22 +62,20 @@ public class NotesViewModel extends AndroidViewModel {
         return orderByDateDesc;
     }
 
-    // ===== ACCESS REPOSITORY (write operations) =====
+    // ===== CRUD =====
     public void delete(Note note, Runnable onDone) {
         repository.delete(note, onDone);
     }
 
-    // ===== INSERT =====
     public void insert(Note note, Runnable onDone) {
         repository.insert(note, onDone);
+    }
+
+    public void update(Note note) {
+        repository.update(note, null);
     }
 
     public LiveData<Note> getNoteById(long id) {
         return repository.observeById(id);
     }
-
-    public void update(Note note) {
-        repository.update(note,null);
-    }
-
 }

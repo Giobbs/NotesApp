@@ -9,13 +9,19 @@ import java.util.List;
 public interface NoteDao {
 
     // =========================
-    // 📌 QUERY BASE
+    // 📌 BASE LISTA
     // =========================
 
     @Query("SELECT * FROM notes " +
             "WHERE deleted = 0 " +
             "ORDER BY pinned DESC, updatedAt DESC")
-    LiveData<List<Note>> observeAll();
+    LiveData<List<Note>> observeAllDesc();
+
+
+    @Query("SELECT * FROM notes " +
+            "WHERE deleted = 0 " +
+            "ORDER BY pinned DESC, updatedAt ASC")
+    LiveData<List<Note>> observeAllAsc();
 
 
     @Query("SELECT * FROM notes " +
@@ -31,11 +37,18 @@ public interface NoteDao {
             "WHERE deleted = 0 " +
             "AND (title LIKE :q OR content LIKE :q OR tags LIKE :q) " +
             "ORDER BY pinned DESC, updatedAt DESC")
-    LiveData<List<Note>> search(String q);
+    LiveData<List<Note>> searchDesc(String q);
+
+
+    @Query("SELECT * FROM notes " +
+            "WHERE deleted = 0 " +
+            "AND (title LIKE :q OR content LIKE :q OR tags LIKE :q) " +
+            "ORDER BY pinned DESC, updatedAt ASC")
+    LiveData<List<Note>> searchAsc(String q);
 
 
     // =========================
-    // 📥 INSERT / UPDATE / DELETE
+    // 📥 INSERT / UPDATE
     // =========================
 
     @Insert(onConflict = OnConflictStrategy.REPLACE)
@@ -43,6 +56,11 @@ public interface NoteDao {
 
     @Update
     int update(Note note);
+
+
+    // =========================
+    // 🗑 SOFT DELETE
+    // =========================
 
     @Query("UPDATE notes " +
             "SET deleted = 1, updatedAt = :timestamp " +
@@ -71,7 +89,7 @@ public interface NoteDao {
 
 
     // =========================
-    // 📊 FILTRI UI
+    // 📊 FILTER UI
     // =========================
 
     @Query("SELECT * FROM notes " +
@@ -91,6 +109,11 @@ public interface NoteDao {
             "ORDER BY createdAt DESC " +
             "LIMIT :limit")
     LiveData<List<Note>> observeRecent(int limit);
+
+
+    // =========================
+    // 🧩 LEGACY / COMPAT
+    // =========================
 
     @Query("DELETE FROM notes WHERE id = :id")
     int deleteById(long id);
