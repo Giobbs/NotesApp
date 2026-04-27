@@ -7,10 +7,12 @@ import android.widget.ImageView;
 import android.widget.TextView;
 
 import androidx.annotation.NonNull;
+import androidx.cardview.widget.CardView;
 import androidx.recyclerview.widget.RecyclerView;
 
 import com.example.notesapp.R;
 import com.example.notesapp.data.local.Note;
+import com.google.android.material.card.MaterialCardView;
 
 import java.util.ArrayList;
 import java.util.List;
@@ -20,7 +22,9 @@ public class NoteAdapter extends RecyclerView.Adapter<NoteAdapter.NoteViewHolder
     private List<Note> notes = new ArrayList<>();
     private OnNoteActionListener listener;
 
+    // 🔥 Listener unico (più scalabile)
     public interface OnNoteActionListener {
+        void onNoteClick(Note note);
         void onDelete(Note note);
     }
 
@@ -43,14 +47,7 @@ public class NoteAdapter extends RecyclerView.Adapter<NoteAdapter.NoteViewHolder
 
     @Override
     public void onBindViewHolder(@NonNull NoteViewHolder holder, int position) {
-        Note note = notes.get(position);
-
-        holder.title.setText(note.title);
-        holder.content.setText(note.content);
-
-        holder.delete.setOnClickListener(v -> {
-            if (listener != null) listener.onDelete(note);
-        });
+        holder.bind(notes.get(position), listener);
     }
 
     @Override
@@ -58,16 +55,42 @@ public class NoteAdapter extends RecyclerView.Adapter<NoteAdapter.NoteViewHolder
         return notes.size();
     }
 
+    // =========================
+    // VIEW HOLDER
+    // =========================
     static class NoteViewHolder extends RecyclerView.ViewHolder {
 
         TextView title, content;
         ImageView delete;
+        MaterialCardView card;
 
         public NoteViewHolder(@NonNull View itemView) {
             super(itemView);
+
             title = itemView.findViewById(R.id.title);
             content = itemView.findViewById(R.id.content);
             delete = itemView.findViewById(R.id.btnDelete);
+            card = itemView.findViewById(R.id.cardNote);
+        }
+
+        void bind(Note note, OnNoteActionListener listener) {
+
+            title.setText(note.title);
+            content.setText(note.content);
+
+            // 🔥 CLICK ITEM → EDIT
+            card.setOnClickListener(v -> {
+                if (listener != null) {
+                    listener.onNoteClick(note);
+                }
+            });
+
+            // 🗑 DELETE
+            delete.setOnClickListener(v -> {
+                if (listener != null) {
+                    listener.onDelete(note);
+                }
+            });
         }
     }
 }

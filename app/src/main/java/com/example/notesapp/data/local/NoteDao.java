@@ -94,4 +94,7 @@ public interface NoteDao {
 
     @Query("DELETE FROM notes WHERE id = :id")
     int deleteById(long id);
+
+    @Query("SELECT * FROM notes WHERE id = :id LIMIT 1")
+    LiveData<Note> getNoteById(long id);
 }

@@ -46,7 +46,9 @@ public class NoteRepository {
             }
 
             note.updatedAt = now;
-            noteDao.insert(note);
+
+            long id = noteDao.insert(note);
+            note.id = id;
 
             if (onComplete != null) onComplete.run();
         });
@@ -63,9 +65,11 @@ public class NoteRepository {
 
     public void delete(Note note, Runnable onComplete) {
         executor.execute(() -> {
-            noteDao.deleteById(note.id);
+            noteDao.softDelete(note.id, System.currentTimeMillis());
 
             if (onComplete != null) onComplete.run();
         });
     }
+
+
 }

@@ -12,6 +12,11 @@
         android:supportsRtl="true"
         android:theme="@style/Theme.NotesApp">
         <activity
+            android:name=".EditNoteActivity"
+            android:exported="false"
+            android:label="Modifica Nota"
+            android:theme="@style/Theme.NotesApp" />
+        <activity
             android:name=".AddNoteActivity"
             android:exported="false"
             android:label="@string/title_activity_add_note"

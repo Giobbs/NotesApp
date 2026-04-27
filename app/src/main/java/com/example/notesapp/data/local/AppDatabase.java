@@ -62,8 +62,7 @@ public abstract class AppDatabase extends RoomDatabase {
                 @Override
                 public void onCreate(@NonNull SupportSQLiteDatabase db) {
                     super.onCreate(db);
-                    // Qui puoi inizializzare dati base se serve
-                }
+                 }
             };
 
     // =========================
@@ -73,8 +72,6 @@ public abstract class AppDatabase extends RoomDatabase {
         @Override
         public void migrate(@NonNull SupportSQLiteDatabase database) {
 
-            // esempio evolutivo (quando aggiungi colonne)
-            // database.execSQL("ALTER TABLE notes ADD COLUMN archived INTEGER NOT NULL DEFAULT 0");
         }
     };
 }
