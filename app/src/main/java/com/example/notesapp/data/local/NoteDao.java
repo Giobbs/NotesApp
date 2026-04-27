@@ -151,4 +151,7 @@ ORDER BY
             String tag,
             String sort
     );
+
+    @Query("SELECT * FROM notes ORDER BY id DESC LIMIT 3")
+    List<Note> getRecentNotes();
 }

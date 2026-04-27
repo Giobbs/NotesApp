@@ -16,6 +16,7 @@ import com.example.notesapp.data.local.Note;
 import com.example.notesapp.data.local.SortType;
 import com.example.notesapp.ui.main.NoteAdapter;
 import com.example.notesapp.ui.main.NotesViewModel;
+import com.example.notesapp.ui.widget.WidgetUpdater;
 import com.google.android.material.floatingactionbutton.FloatingActionButton;
 
 public class MainActivity extends AppCompatActivity {
@@ -53,6 +54,7 @@ public class MainActivity extends AppCompatActivity {
         setupViewModel();
         setupAdapter();
         setupActions();
+
     }
 
     private void initViews() {
@@ -95,11 +97,15 @@ public class MainActivity extends AppCompatActivity {
             @Override
             public void onDelete(Note note) {
                 viewModel.delete(note, null);
+                WidgetUpdater.update(MainActivity.this);
+
             }
 
             @Override
             public void onPin(Note note) {
                 viewModel.setPinned(note.id, !note.isPinned());
+                WidgetUpdater.update(MainActivity.this);
+
             }
 
             @Override
@@ -114,6 +120,8 @@ public class MainActivity extends AppCompatActivity {
             @Override
             public void onAddTag(Note note, String tag) {
                 viewModel.updateTags(note.id, tag);
+                WidgetUpdater.update(MainActivity.this);
+
             }
         });
     }
