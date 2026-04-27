@@ -2,43 +2,54 @@ package com.example.notesapp;
 
 import android.content.Intent;
 import android.os.Bundle;
-import android.os.Handler;
-import android.os.Looper;
-import android.view.Menu;
-import android.view.MenuItem;
+import android.widget.Button;
 
-import androidx.annotation.NonNull;
 import androidx.appcompat.app.AppCompatActivity;
 import androidx.appcompat.widget.SearchView;
 import androidx.lifecycle.ViewModelProvider;
 import androidx.recyclerview.widget.LinearLayoutManager;
 import androidx.recyclerview.widget.RecyclerView;
 
-import com.example.notesapp.data.local.Note;
+import com.example.notesapp.data.local.Note; // 🔥 MANCAVA
 import com.example.notesapp.data.local.SortType;
 import com.example.notesapp.ui.main.NoteAdapter;
 import com.example.notesapp.ui.main.NotesViewModel;
 import com.google.android.material.floatingactionbutton.FloatingActionButton;
-import com.google.android.material.snackbar.Snackbar;
 
 public class MainActivity extends AppCompatActivity {
 
-    private static final long DEBOUNCE_MS = 300;
-
     private NotesViewModel viewModel;
     private NoteAdapter adapter;
-    private RecyclerView recyclerView;
 
-    private final Handler handler = new Handler(Looper.getMainLooper());
-    private Runnable searchRunnable;
+    private SearchView searchView;
+    private Button btnSort;
+    private Button btnPinned;
+    private FloatingActionButton fabAdd;
+
+    private boolean pinnedActive = false;
+
+    private enum SortState {
+        DATE_DESC,
+        DATE_ASC,
+        TITLE
+    }
+
+    private SortState sortState = SortState.DATE_DESC;
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
         setContentView(R.layout.activity_main);
 
-        FloatingActionButton fabAdd = findViewById(R.id.fabAdd);
-        recyclerView = findViewById(R.id.recyclerView);
+        // =========================
+        // VIEW INIT
+        // =========================
+        searchView = findViewById(R.id.searchView);
+        btnSort = findViewById(R.id.btnSort);
+        btnPinned = findViewById(R.id.btnPinned);
+        fabAdd = findViewById(R.id.fabAdd);
+
+        RecyclerView recyclerView = findViewById(R.id.recyclerView);
 
         // =========================
         // RECYCLER
@@ -52,21 +63,7 @@ public class MainActivity extends AppCompatActivity {
         // =========================
         viewModel = new ViewModelProvider(this).get(NotesViewModel.class);
 
-        viewModel.getNotes().observe(this, notes -> {
-            adapter.setNotes(notes);
-        });
-
-        // =========================
-        // FAB
-        // =========================
-        fabAdd.setOnClickListener(v -> {
-            Intent intent = new Intent(MainActivity.this, AddNoteActivity.class);
-            startActivity(intent);
-        });
-
-        // =========================
-        // ADAPTER ACTIONS
-        // =========================
+        // LISTENER NOTE
         adapter.setListener(new NoteAdapter.OnNoteActionListener() {
 
             @Override
@@ -78,90 +75,93 @@ public class MainActivity extends AppCompatActivity {
 
             @Override
             public void onDelete(Note note) {
-                viewModel.delete(note, () -> {
-                    Snackbar.make(recyclerView,
-                                    "Nota eliminata",
-                                    Snackbar.LENGTH_LONG)
-                            .setAction("UNDO", v -> viewModel.insert(note, null))
-                            .show();
-                });
+                viewModel.delete(note, null);
+            }
+
+            @Override
+            public void onPin(Note note) {
+
+                boolean newPinned = false;
+
+                if (note != null) {
+                    newPinned = !note.isPinned(); // oppure note.pinned
+                }
+
+                viewModel.setPinned(note.id, newPinned);
             }
         });
-    }
 
-    // =========================
-    // MENU + SEARCH
-    // =========================
-    @Override
-    public boolean onCreateOptionsMenu(Menu menu) {
-        getMenuInflater().inflate(R.menu.menu_notes, menu);
+        // OBSERVE DATA
+        viewModel.getNotes().observe(this, adapter::setNotes);
 
-        MenuItem searchItem = menu.findItem(R.id.action_search);
-        SearchView searchView = (SearchView) searchItem.getActionView();
-
-        searchView.setQueryHint("Cerca note...");
-        searchView.clearFocus();
+        // =========================
+        // SEARCH
+        // =========================
+        searchView.setIconifiedByDefault(false);
 
         searchView.setOnQueryTextListener(new SearchView.OnQueryTextListener() {
 
             @Override
             public boolean onQueryTextSubmit(String query) {
-                viewModel.setSearchQuery(query);
+                viewModel.setSearchQuery(clean(query));
                 return true;
             }
 
             @Override
             public boolean onQueryTextChange(String newText) {
-
-                setSearchingState(!newText.isEmpty());
-
-                handler.removeCallbacks(searchRunnable);
-
-                searchRunnable = () -> {
-                    viewModel.setSearchQuery(newText.trim());
-                };
-
-                handler.postDelayed(searchRunnable, DEBOUNCE_MS);
-
+                viewModel.setSearchQuery(clean(newText));
                 return true;
             }
         });
 
-        searchView.setOnCloseListener(() -> {
-            viewModel.setSearchQuery("");
-            setSearchingState(false);
-            return false;
+        // =========================
+        // SORT
+        // =========================
+        btnSort.setOnClickListener(v -> {
+
+            switch (sortState) {
+
+                case DATE_DESC:
+                    sortState = SortState.DATE_ASC;
+                    viewModel.setSortType(SortType.DATE_ASC);
+                    btnSort.setText("Data ↑");
+                    break;
+
+                case DATE_ASC:
+                    sortState = SortState.TITLE;
+                    viewModel.setSortType(SortType.TITLE_ASC);
+                    btnSort.setText("Titolo");
+                    break;
+
+                case TITLE:
+                default:
+                    sortState = SortState.DATE_DESC;
+                    viewModel.setSortType(SortType.DATE_DESC);
+                    btnSort.setText("Data ↓");
+                    break;
+            }
         });
 
-        return true;
+        // =========================
+        // PIN FILTER
+        // =========================
+        btnPinned.setOnClickListener(v -> {
+
+            pinnedActive = !pinnedActive;
+            viewModel.setShowPinnedOnly(pinnedActive);
+
+            btnPinned.setText(pinnedActive ? "Pinned ON ⭐" : "Pinned OFF");
+        });
+
+        // =========================
+        // ADD NOTE
+        // =========================
+        fabAdd.setOnClickListener(v ->
+                startActivity(new Intent(this, AddNoteActivity.class))
+        );
     }
 
-    // =========================
-    // SORT MENU
-    // =========================
-    @Override
-    public boolean onOptionsItemSelected(@NonNull MenuItem item) {
-
-        if (item.getItemId() == R.id.action_sort_date) {
-            viewModel.setSortType(SortType.DATE_DESC);
-            return true;
-        }
-
-        if (item.getItemId() == R.id.action_sort_title) {
-            viewModel.setSortType(SortType.TITLE_ASC);
-            return true;
-        }
-
-        return super.onOptionsItemSelected(item);
-    }
-
-    // =========================
-    // UI STATE
-    // =========================
-    private void setSearchingState(boolean active) {
-        recyclerView.animate()
-                .alpha(active ? 0.6f : 1f)
-                .setDuration(150)
-                .start();
+    private String clean(String s) {
+        return s == null ? "" : s.trim();
     }
 }

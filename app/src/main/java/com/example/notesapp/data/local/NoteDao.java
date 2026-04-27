@@ -94,4 +94,14 @@ public interface NoteDao {
 
     @Query("DELETE FROM notes WHERE id = :id")
     int deleteById(long id);
+
+    @Query("SELECT * FROM notes " +
+            "WHERE deleted = 0 AND pinned = 1 " +
+            "AND (title LIKE :q OR content LIKE :q OR tags LIKE :q) " +
+            "ORDER BY " +
+            "CASE WHEN :sort = 'TITLE_ASC' THEN title END ASC, " +
+            "CASE WHEN :sort = 'TITLE_DESC' THEN title END DESC, " +
+            "CASE WHEN :sort = 'DATE_ASC' THEN updatedAt END ASC, " +
+            "CASE WHEN :sort = 'DATE_DESC' THEN updatedAt END DESC")
+    LiveData<List<Note>> searchPinned(String q, String sort);
 }

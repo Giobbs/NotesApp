@@ -4,11 +4,10 @@ import android.text.format.DateUtils;
 import android.view.LayoutInflater;
 import android.view.View;
 import android.view.ViewGroup;
-import android.widget.ImageView;
+import android.widget.ImageButton;
 import android.widget.TextView;
 
 import androidx.annotation.NonNull;
-import androidx.cardview.widget.CardView;
 import androidx.recyclerview.widget.RecyclerView;
 
 import com.example.notesapp.R;
@@ -22,10 +21,14 @@ public class NoteAdapter extends RecyclerView.Adapter<NoteAdapter.NoteViewHolder
 
     private List<Note> notes = new ArrayList<>();
     private OnNoteActionListener listener;
-     // 🔥 Listener unico (più scalabile)
+
+    // =========================
+    // LISTENER
+    // =========================
     public interface OnNoteActionListener {
         void onNoteClick(Note note);
         void onDelete(Note note);
+        void onPin(Note note);
     }
 
     public void setListener(OnNoteActionListener listener) {
@@ -44,11 +47,11 @@ public class NoteAdapter extends RecyclerView.Adapter<NoteAdapter.NoteViewHolder
                 .inflate(R.layout.item_note, parent, false);
         return new NoteViewHolder(v);
     }
+
     @Override
     public void onBindViewHolder(@NonNull NoteViewHolder holder, int position) {
 
         Note note = notes.get(position);
-
         holder.bind(note, listener);
 
         holder.updatedAt.setText(
@@ -70,18 +73,20 @@ public class NoteAdapter extends RecyclerView.Adapter<NoteAdapter.NoteViewHolder
     // =========================
     static class NoteViewHolder extends RecyclerView.ViewHolder {
 
-        TextView title, content;
-        ImageView delete;
+        TextView title, content, updatedAt;
+        ImageButton delete, pin;
         MaterialCardView card;
-        TextView updatedAt;
 
         public NoteViewHolder(@NonNull View itemView) {
             super(itemView);
 
             title = itemView.findViewById(R.id.title);
             content = itemView.findViewById(R.id.content);
-            delete = itemView.findViewById(R.id.btnDelete);
             updatedAt = itemView.findViewById(R.id.updatedAt);
+
+            delete = itemView.findViewById(R.id.btnDelete);
+            pin = itemView.findViewById(R.id.btnPin);
+
             card = itemView.findViewById(R.id.cardNote);
         }
 
@@ -90,19 +95,51 @@ public class NoteAdapter extends RecyclerView.Adapter<NoteAdapter.NoteViewHolder
             title.setText(note.title);
             content.setText(note.content);
 
-            // 🔥 CLICK ITEM → EDIT
+            // =========================
+            // CLICK NOTE (EDIT)
+            // =========================
             card.setOnClickListener(v -> {
                 if (listener != null) {
                     listener.onNoteClick(note);
                 }
             });
 
-            // 🗑 DELETE
+            // =========================
+            // DELETE
+            // =========================
             delete.setOnClickListener(v -> {
                 if (listener != null) {
                     listener.onDelete(note);
                 }
             });
+
+            // =========================
+            // ⭐ PIN TOGGLE (FIX PRINCIPALE)
+            // =========================
+            pin.setOnClickListener(v -> {
+                if (listener != null) {
+                    listener.onPin(note);
+                }
+            });
+
+            // =========================
+            // UI STATE PIN
+            // =========================
+            boolean pinned = note.isPinned();
+
+            pin.setImageResource(
+                    pinned
+                            ? android.R.drawable.star_on
+                            : android.R.drawable.star_off
+            );
+
+            card.setStrokeWidth(pinned ? 6 : 0);
+
+            card.setStrokeColor(
+                    pinned
+                            ? itemView.getResources().getColor(android.R.color.holo_orange_light)
+                            : itemView.getResources().getColor(android.R.color.transparent)
+            );
         }
     }
 }

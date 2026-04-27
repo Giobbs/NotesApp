@@ -21,25 +21,36 @@ public class NoteRepository {
     }
 
     // =========================
-    // 📌 READ
+    // 📌 READ UNIFICATO (FIX PRINCIPALE)
     // =========================
 
-    public LiveData<List<Note>> observeAll(SortType sortType) {
-        return noteDao.observeAll(sortType.name());
-    }
+    public LiveData<List<Note>> getNotes(String query, SortType sortType, boolean pinnedOnly) {
 
-    public LiveData<List<Note>> search(String query, SortType sortType) {
+        String q = (query == null || query.trim().isEmpty())
+                ? "%"
+                : "%" + query + "%";
 
-        if (query == null || query.trim().isEmpty()) {
-            return observeAll(sortType);
+        if (pinnedOnly) {
+            return noteDao.searchPinned(q, sortType.name());
         }
 
-        String q = "%" + query + "%";
         return noteDao.search(q, sortType.name());
     }
 
     public LiveData<Note> observeById(long id) {
         return noteDao.observeById(id);
+    }
+
+    public LiveData<List<Note>> observePinned() {
+        return noteDao.observePinned();
+    }
+
+    public LiveData<List<Note>> observeArchived() {
+        return noteDao.observeArchived();
+    }
+
+    public LiveData<List<Note>> observeRecent(int limit) {
+        return noteDao.observeRecent(limit);
     }
 
     // =========================
@@ -56,8 +67,7 @@ public class NoteRepository {
 
             note.updatedAt = now;
 
-            long id = noteDao.insert(note);
-            note.id = id;
+            noteDao.insert(note);
 
             if (onComplete != null) onComplete.run();
         });
@@ -84,26 +94,9 @@ public class NoteRepository {
     // 📌 PIN / ARCHIVE
     // =========================
 
-    public LiveData<List<Note>> observePinned() {
-        return noteDao.observePinned();
-    }
-
-    public LiveData<List<Note>> observeArchived() {
-        return noteDao.observeArchived();
-    }
-
-    public LiveData<List<Note>> observeRecent(int limit) {
-        return noteDao.observeRecent(limit);
-    }
-
-    // =========================
-    // 🔁 STATE CHANGES
-    // =========================
-
     public void setPinned(long id, boolean pinned, Runnable onComplete) {
         executor.execute(() -> {
             noteDao.setPinned(id, pinned, System.currentTimeMillis());
-
             if (onComplete != null) onComplete.run();
         });
     }
@@ -111,7 +104,6 @@ public class NoteRepository {
     public void setArchived(long id, boolean archived, Runnable onComplete) {
         executor.execute(() -> {
             noteDao.setArchived(id, archived, System.currentTimeMillis());
-
             if (onComplete != null) onComplete.run();
         });
     }
@@ -119,7 +111,6 @@ public class NoteRepository {
     public void restore(long id, Runnable onComplete) {
         executor.execute(() -> {
             noteDao.restore(id, System.currentTimeMillis());
-
             if (onComplete != null) onComplete.run();
         });
     }
@@ -127,7 +118,6 @@ public class NoteRepository {
     public void deleteById(long id, Runnable onComplete) {
         executor.execute(() -> {
             noteDao.deleteById(id);
-
             if (onComplete != null) onComplete.run();
         });
     }
