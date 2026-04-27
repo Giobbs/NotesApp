@@ -10,6 +10,7 @@ import androidx.lifecycle.Transformations;
 
 import com.example.notesapp.data.local.AppDatabase;
 import com.example.notesapp.data.local.Note;
+import com.example.notesapp.data.local.SortType;
 import com.example.notesapp.data.repository.NoteRepository;
 
 import java.util.List;
@@ -18,9 +19,11 @@ public class NotesViewModel extends AndroidViewModel {
 
     private final NoteRepository repository;
 
+    // ===== STATE =====
     private final MutableLiveData<String> searchQuery = new MutableLiveData<>("");
-    private final MutableLiveData<Boolean> orderByDateDesc = new MutableLiveData<>(true);
+    private final MutableLiveData<SortType> sortType = new MutableLiveData<>(SortType.DATE_DESC);
 
+    // ===== DATA =====
     private final LiveData<List<Note>> visibleNotes;
 
     public NotesViewModel(@NonNull Application application) {
@@ -31,14 +34,13 @@ public class NotesViewModel extends AndroidViewModel {
         );
 
         visibleNotes = Transformations.switchMap(searchQuery, query ->
-                Transformations.switchMap(orderByDateDesc, desc -> {
-
-                    return repository.search(query, desc);
-                })
+                Transformations.switchMap(sortType, sort ->
+                        repository.search(query, sort)
+                )
         );
     }
 
-    // ===== UI LIST =====
+    // ===== LIST =====
     public LiveData<List<Note>> getNotes() {
         return visibleNotes;
     }
@@ -52,14 +54,26 @@ public class NotesViewModel extends AndroidViewModel {
         return searchQuery;
     }
 
-    // ===== ORDER =====
-    public void toggleOrder() {
-        Boolean current = orderByDateDesc.getValue();
-        orderByDateDesc.setValue(current == null || !current);
+    // ===== SORT =====
+    public void setSortType(SortType type) {
+        sortType.setValue(type);
     }
 
-    public LiveData<Boolean> getOrderState() {
-        return orderByDateDesc;
+    public LiveData<SortType> getSortType() {
+        return sortType;
+    }
+
+    // Toggle utile UI (facoltativo)
+    public void toggleSortDirection() {
+        SortType current = sortType.getValue();
+
+        if (current == null || current == SortType.DATE_DESC) {
+            sortType.setValue(SortType.DATE_ASC);
+        } else if (current == SortType.DATE_ASC) {
+            sortType.setValue(SortType.TITLE_ASC);
+        } else {
+            sortType.setValue(SortType.DATE_DESC);
+        }
     }
 
     // ===== CRUD =====

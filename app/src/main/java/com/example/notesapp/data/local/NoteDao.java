@@ -9,43 +9,41 @@ import java.util.List;
 public interface NoteDao {
 
     // =========================
-    // 📌 BASE LISTA
+    // 📌 BASE + SORT UNIFICATO
     // =========================
 
     @Query("SELECT * FROM notes " +
             "WHERE deleted = 0 " +
-            "ORDER BY pinned DESC, updatedAt DESC")
-    LiveData<List<Note>> observeAllDesc();
+            "ORDER BY pinned DESC, " +
+            "CASE WHEN :sort = 'TITLE_ASC' THEN title END ASC, " +
+            "CASE WHEN :sort = 'TITLE_DESC' THEN title END DESC, " +
+            "CASE WHEN :sort = 'DATE_ASC' THEN updatedAt END ASC, " +
+            "CASE WHEN :sort = 'DATE_DESC' THEN updatedAt END DESC")
+    LiveData<List<Note>> observeAll(String sort);
 
+    // =========================
+    // 🔎 SEARCH + SORT UNIFICATO
+    // =========================
 
     @Query("SELECT * FROM notes " +
             "WHERE deleted = 0 " +
-            "ORDER BY pinned DESC, updatedAt ASC")
-    LiveData<List<Note>> observeAllAsc();
+            "AND (title LIKE :q OR content LIKE :q OR tags LIKE :q) " +
+            "ORDER BY pinned DESC, " +
+            "CASE WHEN :sort = 'TITLE_ASC' THEN title END ASC, " +
+            "CASE WHEN :sort = 'TITLE_DESC' THEN title END DESC, " +
+            "CASE WHEN :sort = 'DATE_ASC' THEN updatedAt END ASC, " +
+            "CASE WHEN :sort = 'DATE_DESC' THEN updatedAt END DESC")
+    LiveData<List<Note>> search(String q, String sort);
 
+    // =========================
+    // 📌 SINGLE NOTE
+    // =========================
 
-    @Query("SELECT * FROM notes " +
-            "WHERE id = :id AND deleted = 0")
+    @Query("SELECT * FROM notes WHERE id = :id AND deleted = 0")
     LiveData<Note> observeById(long id);
 
-
-    // =========================
-    // 🔎 SEARCH
-    // =========================
-
-    @Query("SELECT * FROM notes " +
-            "WHERE deleted = 0 " +
-            "AND (title LIKE :q OR content LIKE :q OR tags LIKE :q) " +
-            "ORDER BY pinned DESC, updatedAt DESC")
-    LiveData<List<Note>> searchDesc(String q);
-
-
-    @Query("SELECT * FROM notes " +
-            "WHERE deleted = 0 " +
-            "AND (title LIKE :q OR content LIKE :q OR tags LIKE :q) " +
-            "ORDER BY pinned DESC, updatedAt ASC")
-    LiveData<List<Note>> searchAsc(String q);
-
+    @Query("SELECT * FROM notes WHERE id = :id LIMIT 1")
+    LiveData<Note> getNoteById(long id);
 
     // =========================
     // 📥 INSERT / UPDATE
@@ -57,67 +55,43 @@ public interface NoteDao {
     @Update
     int update(Note note);
 
-
     // =========================
     // 🗑 SOFT DELETE
     // =========================
 
-    @Query("UPDATE notes " +
-            "SET deleted = 1, updatedAt = :timestamp " +
-            "WHERE id = :id")
+    @Query("UPDATE notes SET deleted = 1, updatedAt = :timestamp WHERE id = :id")
     int softDelete(long id, long timestamp);
 
-    @Query("UPDATE notes " +
-            "SET deleted = 0, updatedAt = :timestamp " +
-            "WHERE id = :id")
+    @Query("UPDATE notes SET deleted = 0, updatedAt = :timestamp WHERE id = :id")
     int restore(long id, long timestamp);
-
 
     // =========================
     // 📌 PIN / ARCHIVE
     // =========================
 
-    @Query("UPDATE notes " +
-            "SET pinned = :pinned, updatedAt = :timestamp " +
-            "WHERE id = :id")
+    @Query("UPDATE notes SET pinned = :pinned, updatedAt = :timestamp WHERE id = :id")
     int setPinned(long id, boolean pinned, long timestamp);
 
-    @Query("UPDATE notes " +
-            "SET archived = :archived, updatedAt = :timestamp " +
-            "WHERE id = :id")
+    @Query("UPDATE notes SET archived = :archived, updatedAt = :timestamp WHERE id = :id")
     int setArchived(long id, boolean archived, long timestamp);
-
 
     // =========================
     // 📊 FILTER UI
     // =========================
 
-    @Query("SELECT * FROM notes " +
-            "WHERE deleted = 0 AND pinned = 1 " +
-            "ORDER BY updatedAt DESC")
+    @Query("SELECT * FROM notes WHERE deleted = 0 AND pinned = 1 ORDER BY updatedAt DESC")
     LiveData<List<Note>> observePinned();
 
-
-    @Query("SELECT * FROM notes " +
-            "WHERE deleted = 0 AND archived = 1 " +
-            "ORDER BY updatedAt DESC")
+    @Query("SELECT * FROM notes WHERE deleted = 0 AND archived = 1 ORDER BY updatedAt DESC")
     LiveData<List<Note>> observeArchived();
 
-
-    @Query("SELECT * FROM notes " +
-            "WHERE deleted = 0 " +
-            "ORDER BY createdAt DESC " +
-            "LIMIT :limit")
+    @Query("SELECT * FROM notes WHERE deleted = 0 ORDER BY createdAt DESC LIMIT :limit")
     LiveData<List<Note>> observeRecent(int limit);
 
-
     // =========================
-    // 🧩 LEGACY / COMPAT
+    // 🗑 HARD DELETE
     // =========================
 
     @Query("DELETE FROM notes WHERE id = :id")
     int deleteById(long id);
-
-    @Query("SELECT * FROM notes WHERE id = :id LIMIT 1")
-    LiveData<Note> getNoteById(long id);
 }

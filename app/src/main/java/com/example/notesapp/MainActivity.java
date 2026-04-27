@@ -4,7 +4,10 @@ import android.content.Intent;
 import android.os.Bundle;
 import android.os.Handler;
 import android.os.Looper;
+import android.view.Menu;
+import android.view.MenuItem;
 
+import androidx.annotation.NonNull;
 import androidx.appcompat.app.AppCompatActivity;
 import androidx.appcompat.widget.SearchView;
 import androidx.lifecycle.ViewModelProvider;
@@ -12,6 +15,7 @@ import androidx.recyclerview.widget.LinearLayoutManager;
 import androidx.recyclerview.widget.RecyclerView;
 
 import com.example.notesapp.data.local.Note;
+import com.example.notesapp.data.local.SortType;
 import com.example.notesapp.ui.main.NoteAdapter;
 import com.example.notesapp.ui.main.NotesViewModel;
 import com.google.android.material.floatingactionbutton.FloatingActionButton;
@@ -20,8 +24,10 @@ import com.google.android.material.snackbar.Snackbar;
 public class MainActivity extends AppCompatActivity {
 
     private static final long DEBOUNCE_MS = 300;
+
     private NotesViewModel viewModel;
     private NoteAdapter adapter;
+    private RecyclerView recyclerView;
 
     private final Handler handler = new Handler(Looper.getMainLooper());
     private Runnable searchRunnable;
@@ -31,15 +37,9 @@ public class MainActivity extends AppCompatActivity {
         super.onCreate(savedInstanceState);
         setContentView(R.layout.activity_main);
 
-        // =========================
-        // VIEW
-        // =========================
         FloatingActionButton fabAdd = findViewById(R.id.fabAdd);
-        RecyclerView recyclerView = findViewById(R.id.recyclerView);
-        SearchView searchView = findViewById(R.id.searchView);
-        searchView.setIconifiedByDefault(false);
-        searchView.setSubmitButtonEnabled(false);
-        searchView.clearFocus();
+        recyclerView = findViewById(R.id.recyclerView);
+
         // =========================
         // RECYCLER
         // =========================
@@ -48,7 +48,7 @@ public class MainActivity extends AppCompatActivity {
         recyclerView.setAdapter(adapter);
 
         // =========================
-        //         VIEWMODEL
+        // VIEWMODEL
         // =========================
         viewModel = new ViewModelProvider(this).get(NotesViewModel.class);
 
@@ -57,45 +57,7 @@ public class MainActivity extends AppCompatActivity {
         });
 
         // =========================
-        //          SEARCH
-        // =========================
-        searchView.setIconifiedByDefault(false);
-        searchView.setQueryHint("Cerca note...");
-        searchView.setSubmitButtonEnabled(false);
-
-        searchView.setOnQueryTextListener(new SearchView.OnQueryTextListener() {
-
-            @Override
-            public boolean onQueryTextSubmit(String query) {
-                viewModel.setSearchQuery(query);
-                return true;
-            }
-
-            @Override
-            public boolean onQueryTextChange(String newText) {
-
-                setSearchingState(!newText.isEmpty(), recyclerView);
-
-                handler.removeCallbacks(searchRunnable);
-
-                searchRunnable = () -> {
-                    viewModel.setSearchQuery(newText.trim());
-                };
-
-                handler.postDelayed(searchRunnable, DEBOUNCE_MS);
-
-                return true;
-            }
-        });
-
-        searchView.setOnCloseListener(() -> {
-            viewModel.setSearchQuery("");
-            setSearchingState(false, recyclerView);
-            return false;
-        });
-
-        // =========================
-        // FAB ADD NOTE
+        // FAB
         // =========================
         fabAdd.setOnClickListener(v -> {
             Intent intent = new Intent(MainActivity.this, AddNoteActivity.class);
@@ -117,7 +79,7 @@ public class MainActivity extends AppCompatActivity {
             @Override
             public void onDelete(Note note) {
                 viewModel.delete(note, () -> {
-                    Snackbar.make(findViewById(R.id.recyclerView),
+                    Snackbar.make(recyclerView,
                                     "Nota eliminata",
                                     Snackbar.LENGTH_LONG)
                             .setAction("UNDO", v -> viewModel.insert(note, null))
@@ -127,7 +89,76 @@ public class MainActivity extends AppCompatActivity {
         });
     }
 
-    private void setSearchingState(boolean active, RecyclerView recyclerView) {
+    // =========================
+    // MENU + SEARCH
+    // =========================
+    @Override
+    public boolean onCreateOptionsMenu(Menu menu) {
+        getMenuInflater().inflate(R.menu.menu_notes, menu);
+
+        MenuItem searchItem = menu.findItem(R.id.action_search);
+        SearchView searchView = (SearchView) searchItem.getActionView();
+
+        searchView.setQueryHint("Cerca note...");
+        searchView.clearFocus();
+
+        searchView.setOnQueryTextListener(new SearchView.OnQueryTextListener() {
+
+            @Override
+            public boolean onQueryTextSubmit(String query) {
+                viewModel.setSearchQuery(query);
+                return true;
+            }
+
+            @Override
+            public boolean onQueryTextChange(String newText) {
+
+                setSearchingState(!newText.isEmpty());
+
+                handler.removeCallbacks(searchRunnable);
+
+                searchRunnable = () -> {
+                    viewModel.setSearchQuery(newText.trim());
+                };
+
+                handler.postDelayed(searchRunnable, DEBOUNCE_MS);
+
+                return true;
+            }
+        });
+
+        searchView.setOnCloseListener(() -> {
+            viewModel.setSearchQuery("");
+            setSearchingState(false);
+            return false;
+        });
+
+        return true;
+    }
+
+    // =========================
+    // SORT MENU
+    // =========================
+    @Override
+    public boolean onOptionsItemSelected(@NonNull MenuItem item) {
+
+        if (item.getItemId() == R.id.action_sort_date) {
+            viewModel.setSortType(SortType.DATE_DESC);
+            return true;
+        }
+
+        if (item.getItemId() == R.id.action_sort_title) {
+            viewModel.setSortType(SortType.TITLE_ASC);
+            return true;
+        }
+
+        return super.onOptionsItemSelected(item);
+    }
+
+    // =========================
+    // UI STATE
+    // =========================
+    private void setSearchingState(boolean active) {
         recyclerView.animate()
                 .alpha(active ? 0.6f : 1f)
                 .setDuration(150)
