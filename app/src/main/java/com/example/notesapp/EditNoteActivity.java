@@ -95,15 +95,22 @@ public class EditNoteActivity extends AppCompatActivity {
             return;
         }
 
-        // =========================
-        // UPDATE SAFE
-        // =========================
+        // 🔐 FIX CRITICO: LEGGI SWITCH
+        android.widget.Switch sw = findViewById(R.id.switchProtect);
+        currentNote.isProtected = sw.isChecked();
+
         currentNote.title = title;
-        currentNote.content = content;
+
+        if (currentNote.isProtected) {
+            currentNote.encryptedContent = content;
+            currentNote.content = ""; // evita leak
+        } else {
+            currentNote.content = content;
+            currentNote.encryptedContent = null;
+        }
 
         viewModel.update(currentNote);
 
         Toast.makeText(this, "Nota aggiornata", Toast.LENGTH_SHORT).show();
         finish();
-    }
-}
+    }}

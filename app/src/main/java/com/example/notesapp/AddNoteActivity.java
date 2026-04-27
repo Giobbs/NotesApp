@@ -46,8 +46,8 @@ public class AddNoteActivity extends AppCompatActivity {
 
         Note note = new Note();
         note.setTitle(title);
+        note.setProtected(false);
         note.setContent(content);
-
         // salva su DB
         viewModel.insert(note, () -> runOnUiThread(() -> {
             Toast.makeText(this, "Nota salvata", Toast.LENGTH_SHORT).show();

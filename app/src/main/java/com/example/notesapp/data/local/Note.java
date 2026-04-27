@@ -55,6 +55,9 @@ public class Note {
 
     public long syncVersion = 0;
 
+    // 🔐 SECURITY
+    public boolean isProtected = false;
+    public String encryptedContent;
     public long getId() {
         return id;
     }
@@ -186,5 +189,23 @@ public class Note {
 
     public void setSyncVersion(long syncVersion) {
         this.syncVersion = syncVersion;
+    }
+
+    public boolean isProtected() {
+        return isProtected;
+    }
+
+    public void setProtected(boolean aProtected) {
+        isProtected = aProtected;
+    }
+    public String getSafeContent() {
+        return isProtected ? encryptedContent : content;
+    }
+    public String getEncryptedContent() {
+        return encryptedContent;
+    }
+
+    public void setEncryptedContent(String encryptedContent) {
+        this.encryptedContent = encryptedContent;
     }
 }

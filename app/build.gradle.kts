@@ -79,7 +79,7 @@ dependencies {
     implementation("androidx.lifecycle:lifecycle-viewmodel-ktx:2.8.2")
     implementation("androidx.lifecycle:lifecycle-livedata-ktx:2.8.2")
     implementation(libs.lifecycle.runtime.ktx)
-
+    implementation("androidx.biometric:biometric:1.1.0")
     // =========================
     // 🗄 ROOM DATABASE
     // =========================

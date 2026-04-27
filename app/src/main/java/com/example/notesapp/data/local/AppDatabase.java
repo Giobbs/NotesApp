@@ -11,7 +11,7 @@ import androidx.sqlite.db.SupportSQLiteDatabase;
 
 @Database(
         entities = {Note.class},
-        version = 1,
+        version = 2,
         exportSchema = true
 )
 public abstract class AppDatabase extends RoomDatabase {
@@ -72,6 +72,13 @@ public abstract class AppDatabase extends RoomDatabase {
         @Override
         public void migrate(@NonNull SupportSQLiteDatabase database) {
 
+            database.execSQL(
+                    "ALTER TABLE notes ADD COLUMN isProtected INTEGER NOT NULL DEFAULT 0"
+            );
+
+            database.execSQL(
+                    "ALTER TABLE notes ADD COLUMN encryptedContent TEXT"
+            );
         }
     };
 }

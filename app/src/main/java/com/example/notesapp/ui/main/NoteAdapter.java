@@ -116,13 +116,20 @@ public class NoteAdapter extends RecyclerView.Adapter<NoteAdapter.NoteViewHolder
         ) {
 
             if (note == null) return;
-
+            if (note.isProtected) {
+                card.setAlpha(0.7f);
+            } else {
+                card.setAlpha(1f);
+            }
             // =========================
             // BASIC DATA
             // =========================
             title.setText(note.getTitle());
-            content.setText(note.getContent());
-
+            if (note.isProtected) {
+                content.setText("🔒 Contenuto protetto");
+            } else {
+                content.setText(note.getContent());
+            }
             updatedAt.setText(
                     DateUtils.getRelativeTimeSpanString(
                             note.getUpdatedAt(),

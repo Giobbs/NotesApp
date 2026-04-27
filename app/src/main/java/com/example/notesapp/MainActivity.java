@@ -6,8 +6,12 @@ import android.os.Bundle;
 import android.widget.Button;
 import android.widget.ImageButton;
 
+import androidx.annotation.NonNull;
 import androidx.appcompat.app.AppCompatActivity;
 import androidx.appcompat.widget.SearchView;
+import androidx.biometric.BiometricManager;
+import androidx.biometric.BiometricPrompt;
+import androidx.core.content.ContextCompat;
 import androidx.lifecycle.ViewModelProvider;
 import androidx.recyclerview.widget.LinearLayoutManager;
 import androidx.recyclerview.widget.RecyclerView;
@@ -89,9 +93,20 @@ public class MainActivity extends AppCompatActivity {
 
             @Override
             public void onNoteClick(Note note) {
-                Intent intent = new Intent(MainActivity.this, EditNoteActivity.class);
-                intent.putExtra(EditNoteActivity.EXTRA_NOTE_ID, note.id);
-                startActivity(intent);
+
+                if (note.isProtected) {
+
+                    authenticate(() -> {
+                        Intent intent = new Intent(MainActivity.this, EditNoteActivity.class);
+                        intent.putExtra(EditNoteActivity.EXTRA_NOTE_ID, note.id);
+                        startActivity(intent);
+                    });
+
+                } else {
+                    Intent intent = new Intent(MainActivity.this, EditNoteActivity.class);
+                    intent.putExtra(EditNoteActivity.EXTRA_NOTE_ID, note.id);
+                    startActivity(intent);
+                }
             }
 
             @Override
@@ -230,6 +245,47 @@ public class MainActivity extends AppCompatActivity {
                 startActivity(new Intent(this, SettingsActivity.class))
         );
     }
+    private void authenticate(Runnable onSuccess) {
+
+        BiometricManager biometricManager =
+                BiometricManager.from(this);
+
+        int result = biometricManager.canAuthenticate(
+                BiometricManager.Authenticators.BIOMETRIC_STRONG
+        );
+
+        android.util.Log.d("BIO", "canAuthenticate = " + result);
+
+        if (result != BiometricManager.BIOMETRIC_SUCCESS) {
+
+            android.util.Log.d("BIO", "Fallback ON");
+
+            // EMULATOR FIX: bypass biometric
+            onSuccess.run();
+            return;
+        }
+
+        BiometricPrompt biometricPrompt = new BiometricPrompt(
+                this,
+                ContextCompat.getMainExecutor(this),
+                new BiometricPrompt.AuthenticationCallback() {
+                    @Override
+                    public void onAuthenticationSucceeded(
+                            @NonNull BiometricPrompt.AuthenticationResult result) {
+                        onSuccess.run();
+                    }
+                });
+
+        BiometricPrompt.PromptInfo promptInfo =
+                new BiometricPrompt.PromptInfo.Builder()
+                        .setTitle("Sblocca nota")
+                        .setSubtitle("Autenticazione richiesta")
+                        .setNegativeButtonText("Annulla")
+                        .build();
+
+        biometricPrompt.authenticate(promptInfo);
+    }
+
 
     private String clean(String s) {
         return s == null ? "" : s.trim();

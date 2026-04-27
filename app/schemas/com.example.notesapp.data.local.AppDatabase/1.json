@@ -2,11 +2,11 @@
   "formatVersion": 1,
   "database": {
     "version": 1,
-    "identityHash": "23bbfd6ff1868e94d2a5dbd72ac53713",
+    "identityHash": "b547513ffbe14936782857a38968381f",
     "entities": [
       {
         "tableName": "notes",
-        "createSql": "CREATE TABLE IF NOT EXISTS `${TABLE_NAME}` (`id` INTEGER PRIMARY KEY AUTOINCREMENT NOT NULL, `uuid` TEXT NOT NULL, `title` TEXT NOT NULL, `content` TEXT NOT NULL, `pinned` INTEGER NOT NULL, `archived` INTEGER NOT NULL, `deleted` INTEGER NOT NULL, `tags` TEXT NOT NULL, `color` TEXT NOT NULL, `priority` INTEGER NOT NULL, `reminderAt` INTEGER, `createdAt` INTEGER NOT NULL, `updatedAt` INTEGER NOT NULL, `lastOpenedAt` INTEGER NOT NULL, `synced` INTEGER NOT NULL, `syncVersion` INTEGER NOT NULL)",
+        "createSql": "CREATE TABLE IF NOT EXISTS `${TABLE_NAME}` (`id` INTEGER PRIMARY KEY AUTOINCREMENT NOT NULL, `uuid` TEXT NOT NULL, `title` TEXT NOT NULL, `content` TEXT NOT NULL, `pinned` INTEGER NOT NULL, `archived` INTEGER NOT NULL, `deleted` INTEGER NOT NULL, `tags` TEXT NOT NULL, `color` TEXT NOT NULL, `priority` INTEGER NOT NULL, `reminderAt` INTEGER, `createdAt` INTEGER NOT NULL, `updatedAt` INTEGER NOT NULL, `lastOpenedAt` INTEGER NOT NULL, `synced` INTEGER NOT NULL, `syncVersion` INTEGER NOT NULL, `isProtected` INTEGER NOT NULL, `encryptedContent` TEXT)",
         "fields": [
           {
             "fieldPath": "id",
@@ -103,6 +103,18 @@
             "columnName": "syncVersion",
             "affinity": "INTEGER",
             "notNull": true
+          },
+          {
+            "fieldPath": "isProtected",
+            "columnName": "isProtected",
+            "affinity": "INTEGER",
+            "notNull": true
+          },
+          {
+            "fieldPath": "encryptedContent",
+            "columnName": "encryptedContent",
+            "affinity": "TEXT",
+            "notNull": false
           }
         ],
         "primaryKey": {
@@ -118,7 +130,7 @@
     "views": [],
     "setupQueries": [
       "CREATE TABLE IF NOT EXISTS room_master_table (id INTEGER PRIMARY KEY,identity_hash TEXT)",
-      "INSERT OR REPLACE INTO room_master_table (id,identity_hash) VALUES(42, '23bbfd6ff1868e94d2a5dbd72ac53713')"
+      "INSERT OR REPLACE INTO room_master_table (id,identity_hash) VALUES(42, 'b547513ffbe14936782857a38968381f')"
     ]
   }
 }
