@@ -199,9 +199,6 @@ public class MainActivity extends AppCompatActivity {
             );
         });
 
-        // =========================
-        // 🔥 TAG FILTER FIX DEFINITIVO
-        // =========================
         btnTagFilter.setOnClickListener(v -> {
 
             android.app.AlertDialog.Builder builder =
@@ -260,7 +257,6 @@ public class MainActivity extends AppCompatActivity {
 
             android.util.Log.d("BIO", "Fallback ON");
 
-            // EMULATOR FIX: bypass biometric
             onSuccess.run();
             return;
         }
