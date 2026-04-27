@@ -64,7 +64,6 @@ public class EditNoteActivity extends AppCompatActivity {
 
             currentNote = note;
 
-            // Evita null crash silenziosi
             etTitle.setText(note.title != null ? note.title : "");
             etContent.setText(note.content != null ? note.content : "");
         });
@@ -95,7 +94,6 @@ public class EditNoteActivity extends AppCompatActivity {
             return;
         }
 
-        // 🔐 FIX CRITICO: LEGGI SWITCH
         android.widget.Switch sw = findViewById(R.id.switchProtect);
         currentNote.isProtected = sw.isChecked();
 
@@ -113,4 +111,5 @@ public class EditNoteActivity extends AppCompatActivity {
 
         Toast.makeText(this, "Nota aggiornata", Toast.LENGTH_SHORT).show();
         finish();
-    }}
+    }
+}

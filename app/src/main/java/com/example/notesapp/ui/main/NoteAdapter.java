@@ -168,7 +168,7 @@ public class NoteAdapter extends RecyclerView.Adapter<NoteAdapter.NoteViewHolder
             });
 
             // =========================
-            // ADD TAG (🔥 FIX PRINCIPALE)
+            // ADD TAG
             // =========================
             addTag.setOnClickListener(v -> {
 

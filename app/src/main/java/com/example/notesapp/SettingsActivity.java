@@ -44,8 +44,7 @@ public class SettingsActivity extends AppCompatActivity {
 
             applyTheme(prefs);
 
-            // ricrea activity per applicare subito il tema
-            recreate();
+             recreate();
         });
     }
 

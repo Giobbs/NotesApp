@@ -12,7 +12,7 @@ public class Note {
     @PrimaryKey(autoGenerate = true)
     public long id;
 
-    // UUID per sync remoto (fondamentale se poi vai su backend)
+    // UUID per sync remoto
     @NonNull
     public String uuid = "";
 
@@ -50,8 +50,7 @@ public class Note {
 
     public long lastOpenedAt;
 
-    // Sync management (utile se aggiungi backend)
-    public boolean synced = false;
+     public boolean synced = false;
 
     public long syncVersion = 0;
 

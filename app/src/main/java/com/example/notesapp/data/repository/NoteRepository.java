@@ -89,7 +89,7 @@ public class NoteRepository {
     }
 
     // =========================
-    // ✏️ FIX: UPDATE TAGS (NUOVO)
+    // ✏️ UPDATE TAGS
     // =========================
     public void updateTags(long noteId, String tags, Runnable onComplete) {
         executor.execute(() -> {

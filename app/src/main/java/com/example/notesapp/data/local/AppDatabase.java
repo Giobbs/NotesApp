@@ -50,7 +50,6 @@ public abstract class AppDatabase extends RoomDatabase {
                 )
                 .addCallback(roomCallback)
                 .addMigrations(MIGRATION_1_2)
-                .fallbackToDestructiveMigration() // solo dev, da rimuovere in produzione
                 .build();
     }
 
