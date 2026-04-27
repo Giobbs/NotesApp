@@ -51,6 +51,15 @@
                 android:layout_height="wrap_content"
                 android:text="IO JSON"
                 android:layout_marginStart="8dp"/>
+            <ImageButton
+                android:id="@+id/btnSettings"
+                android:layout_width="40dp"
+                android:layout_height="40dp"
+                android:layout_marginStart="8dp"
+                android:background="?attr/selectableItemBackgroundBorderless"
+                android:contentDescription="Settings"
+                android:padding="8dp"
+                android:src="@android:drawable/ic_menu_preferences"/>
         </LinearLayout>
 
         <!-- =========================

@@ -31,11 +31,16 @@ public class NoteRepository {
             String tag
     ) {
 
-        String q = (query == null || query.trim().isEmpty())
-                ? "%"
-                : "%" + query + "%";
+        String cleanQuery = (query == null || query.trim().isEmpty())
+                ? null
+                : query.trim();
 
-        return noteDao.searchAll(q, sortType.name(), tag);
+        return noteDao.getFilteredNotes(
+                pinnedOnly,
+                cleanQuery,
+                tag,
+                sortType.name()
+        );
     }
 
     public LiveData<Note> observeById(long id) {

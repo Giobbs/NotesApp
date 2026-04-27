@@ -124,5 +124,31 @@ public interface NoteDao {
 
     @Query("SELECT * FROM notes")
     List<Note> getAllNotesSync();
+    @Query("""
+SELECT * FROM notes
+WHERE deleted = 0
 
+AND (:pinnedOnly = 0 OR pinned = 1)
+
+AND (:query IS NULL OR 
+     title LIKE '%' || :query || '%' OR 
+     content LIKE '%' || :query || '%' OR 
+     tags LIKE '%' || :query || '%')
+
+AND (:tag IS NULL OR :tag = '' OR 
+     (',' || tags || ',') LIKE '%,' || :tag || ',%')
+
+ORDER BY 
+    pinned DESC,
+    CASE WHEN :sort = 'TITLE_ASC' THEN title END ASC,
+    CASE WHEN :sort = 'TITLE_DESC' THEN title END DESC,
+    CASE WHEN :sort = 'DATE_ASC' THEN updatedAt END ASC,
+    CASE WHEN :sort = 'DATE_DESC' THEN updatedAt END DESC
+""")
+    LiveData<List<Note>> getFilteredNotes(
+            boolean pinnedOnly,
+            String query,
+            String tag,
+            String sort
+    );
 }

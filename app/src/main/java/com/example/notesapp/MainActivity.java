@@ -1,8 +1,10 @@
 package com.example.notesapp;
 
 import android.content.Intent;
+import android.content.SharedPreferences;
 import android.os.Bundle;
 import android.widget.Button;
+import android.widget.ImageButton;
 
 import androidx.appcompat.app.AppCompatActivity;
 import androidx.appcompat.widget.SearchView;
@@ -27,6 +29,7 @@ public class MainActivity extends AppCompatActivity {
     private Button btnTagFilter;
     private Button btnImportExport;
     private FloatingActionButton fabAdd;
+    private ImageButton btnSettings;
 
     private boolean pinnedActive = false;
 
@@ -41,6 +44,8 @@ public class MainActivity extends AppCompatActivity {
     @Override
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
+        SharedPreferences prefs = getSharedPreferences("app_settings", MODE_PRIVATE);
+        SettingsActivity.applyTheme(prefs);
         setContentView(R.layout.activity_main);
 
         initViews();
@@ -57,6 +62,7 @@ public class MainActivity extends AppCompatActivity {
         btnTagFilter = findViewById(R.id.btnTagFilter);
         btnImportExport = findViewById(R.id.btnImportExport);
         fabAdd = findViewById(R.id.fabAdd);
+        btnSettings = findViewById(R.id.btnSettings);
     }
 
     private void setupRecycler() {
@@ -70,6 +76,9 @@ public class MainActivity extends AppCompatActivity {
     private void setupViewModel() {
         viewModel = new ViewModelProvider(this).get(NotesViewModel.class);
         viewModel.getNotes().observe(this, adapter::setNotes);
+
+         viewModel.setShowPinnedOnly(false);
+        btnPinned.setText("Pinned OFF");
     }
 
     private void setupAdapter() {
@@ -159,9 +168,12 @@ public class MainActivity extends AppCompatActivity {
         btnPinned.setOnClickListener(v -> {
 
             pinnedActive = !pinnedActive;
+
             viewModel.setShowPinnedOnly(pinnedActive);
 
-            btnPinned.setText(pinnedActive ? "Pinned ON ⭐" : "Pinned OFF");
+            btnPinned.setText(
+                    pinnedActive ? "Pinned ON ⭐" : "Pinned OFF"
+            );
         });
 
         // =========================
@@ -204,6 +216,10 @@ public class MainActivity extends AppCompatActivity {
 
         fabAdd.setOnClickListener(v ->
                 startActivity(new Intent(this, AddNoteActivity.class))
+        );
+
+        btnSettings.setOnClickListener(v ->
+                startActivity(new Intent(this, SettingsActivity.class))
         );
     }
 

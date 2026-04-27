@@ -16,6 +16,7 @@
             android:exported="false"
             android:label="Import Export"
             android:theme="@style/Theme.NotesApp" />
+        <activity android:name=".SettingsActivity"/>
         <activity
             android:name=".EditNoteActivity"
             android:exported="false"
