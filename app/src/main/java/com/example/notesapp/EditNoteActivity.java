@@ -8,6 +8,7 @@ import androidx.appcompat.app.AppCompatActivity;
 import androidx.lifecycle.ViewModelProvider;
 
 import com.example.notesapp.data.local.Note;
+import com.example.notesapp.security.CryptoManager;
 import com.example.notesapp.ui.main.NotesViewModel;
 import com.google.android.material.floatingactionbutton.FloatingActionButton;
 
@@ -65,8 +66,17 @@ public class EditNoteActivity extends AppCompatActivity {
             currentNote = note;
 
             etTitle.setText(note.title != null ? note.title : "");
-            etContent.setText(note.content != null ? note.content : "");
-        });
+            if (note.isProtected && note.encryptedContent != null) {
+                try {
+                    String decrypted = CryptoManager.decrypt(note.encryptedContent);
+                    etContent.setText(decrypted);
+                } catch (Exception e) {
+                    etContent.setText("");
+                    Toast.makeText(this, "Errore decriptazione", Toast.LENGTH_SHORT).show();
+                }
+            } else {
+                etContent.setText(note.content != null ? note.content : "");
+            }        });
 
         // =========================
         // SAVE
@@ -100,8 +110,8 @@ public class EditNoteActivity extends AppCompatActivity {
         currentNote.title = title;
 
         if (currentNote.isProtected) {
-            currentNote.encryptedContent = content;
-            currentNote.content = content;
+            currentNote.encryptedContent = CryptoManager.encrypt(content);
+            currentNote.content = "";
         } else {
             currentNote.content = content;
             currentNote.encryptedContent = null;

@@ -5,6 +5,8 @@ import androidx.annotation.NonNull;
 import androidx.room.Entity;
 import androidx.room.PrimaryKey;
 
+import com.example.notesapp.security.CryptoManager;
+
 @Entity(tableName = "notes")
 public class Note {
 
@@ -198,7 +200,10 @@ public class Note {
         isProtected = aProtected;
     }
     public String getSafeContent() {
-        return isProtected ? encryptedContent : content;
+        if (isProtected && encryptedContent != null) {
+            return CryptoManager.decrypt(encryptedContent);
+        }
+        return content;
     }
     public String getEncryptedContent() {
         return encryptedContent;

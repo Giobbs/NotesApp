@@ -72,7 +72,7 @@ public class MainActivity extends AppCompatActivity {
         setupAdapter();
         setupActions();
 
-        // 🔹 Leggi preferenze (ti serviranno per filtrare/raggruppare)
+        // 🔹 Leggi preferenze
         String aggregation = prefs.getString(SettingsActivity.KEY_AGGREGATION, "none");
         String dateRange = prefs.getString(SettingsActivity.KEY_DATE_RANGE, "7");
 
@@ -151,6 +151,7 @@ public class MainActivity extends AppCompatActivity {
                 if (note.isProtected) {
 
                     authenticate(() -> {
+                        note.isProtected = false;
                         Intent intent = new Intent(MainActivity.this, EditNoteActivity.class);
                         intent.putExtra(EditNoteActivity.EXTRA_NOTE_ID, note.id);
                         startActivity(intent);
