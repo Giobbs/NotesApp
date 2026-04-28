@@ -5,6 +5,7 @@ import android.content.SharedPreferences;
 import android.os.Bundle;
 import android.widget.Button;
 import android.widget.ImageButton;
+import android.widget.Toast;
 
 import androidx.annotation.NonNull;
 import androidx.appcompat.app.AppCompatActivity;
@@ -25,6 +26,7 @@ import com.google.android.material.floatingactionbutton.FloatingActionButton;
 
 import java.util.ArrayList;
 import java.util.List;
+import java.util.concurrent.Executor;
 
 public class MainActivity extends AppCompatActivity {
 
@@ -305,44 +307,85 @@ public class MainActivity extends AppCompatActivity {
     }
     private void authenticate(Runnable onSuccess) {
 
-        BiometricManager biometricManager =
-                BiometricManager.from(this);
+        BiometricManager biometricManager = BiometricManager.from(this);
 
         int result = biometricManager.canAuthenticate(
                 BiometricManager.Authenticators.BIOMETRIC_STRONG
         );
 
-        android.util.Log.d("BIO", "canAuthenticate = " + result);
+        switch (result) {
 
-        if (result != BiometricManager.BIOMETRIC_SUCCESS) {
+            case BiometricManager.BIOMETRIC_SUCCESS:
+                break;
 
-            android.util.Log.d("BIO", "Fallback ON");
+            case BiometricManager.BIOMETRIC_ERROR_NO_HARDWARE:
+                Toast.makeText(this,
+                        "Dispositivo senza sensore biometrico",
+                        Toast.LENGTH_SHORT).show();
+                return;
 
-            onSuccess.run();
-            return;
+            case BiometricManager.BIOMETRIC_ERROR_HW_UNAVAILABLE:
+                Toast.makeText(this,
+                        "Sensore biometrico non disponibile",
+                        Toast.LENGTH_SHORT).show();
+                return;
+
+            case BiometricManager.BIOMETRIC_ERROR_NONE_ENROLLED:
+                Toast.makeText(this,
+                        "Nessuna impronta registrata nel dispositivo",
+                        Toast.LENGTH_SHORT).show();
+                return;
+
+            default:
+                Toast.makeText(this,
+                        "Autenticazione non supportata",
+                        Toast.LENGTH_SHORT).show();
+                return;
         }
+
+        Executor executor = ContextCompat.getMainExecutor(this);
 
         BiometricPrompt biometricPrompt = new BiometricPrompt(
                 this,
-                ContextCompat.getMainExecutor(this),
+                executor,
                 new BiometricPrompt.AuthenticationCallback() {
+
                     @Override
                     public void onAuthenticationSucceeded(
                             @NonNull BiometricPrompt.AuthenticationResult result) {
                         onSuccess.run();
                     }
+
+                    @Override
+                    public void onAuthenticationFailed() {
+                        Toast.makeText(getApplicationContext(),
+                                "Autenticazione fallita",
+                                Toast.LENGTH_SHORT).show();
+                    }
+
+                    @Override
+                    public void onAuthenticationError(
+                            int errorCode,
+                            @NonNull CharSequence errString) {
+
+                        Toast.makeText(getApplicationContext(),
+                                errString,
+                                Toast.LENGTH_SHORT).show();
+                    }
                 });
 
         BiometricPrompt.PromptInfo promptInfo =
                 new BiometricPrompt.PromptInfo.Builder()
-                        .setTitle("Sblocca nota")
-                        .setSubtitle("Autenticazione richiesta")
+                        .setTitle("Sicurezza richiesta")
+                        .setSubtitle("Conferma la tua identità per continuare")
+                        .setAllowedAuthenticators(
+                                BiometricManager.Authenticators.BIOMETRIC_STRONG
+                        )
                         .setNegativeButtonText("Annulla")
                         .build();
 
         biometricPrompt.authenticate(promptInfo);
     }
-
 
     private String clean(String s) {
         return s == null ? "" : s.trim();

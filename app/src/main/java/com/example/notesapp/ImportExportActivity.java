@@ -202,7 +202,7 @@ public class ImportExportActivity extends AppCompatActivity {
 
             String json = array.toString(2);
             pendingExportJson = json;
-            txtResult.setText(json);
+//            txtResult.setText(json);
 
             toast("Export: " + array.length() + " note");
 
