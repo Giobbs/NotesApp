@@ -43,6 +43,8 @@ public class MainActivity extends AppCompatActivity {
 
     private boolean pinnedActive = false;
     private long currentLimit = 0;
+    private static final String PREFS = "app_settings";
+    private static final String KEY_PIN = "user_pin";
     private enum SortState {
         DATE_DESC,
         DATE_ASC,
@@ -319,26 +321,15 @@ public class MainActivity extends AppCompatActivity {
                 break;
 
             case BiometricManager.BIOMETRIC_ERROR_NO_HARDWARE:
-                Toast.makeText(this,
-                        "Dispositivo senza sensore biometrico",
-                        Toast.LENGTH_SHORT).show();
-                return;
-
             case BiometricManager.BIOMETRIC_ERROR_HW_UNAVAILABLE:
-                Toast.makeText(this,
-                        "Sensore biometrico non disponibile",
-                        Toast.LENGTH_SHORT).show();
-                return;
-
             case BiometricManager.BIOMETRIC_ERROR_NONE_ENROLLED:
-                Toast.makeText(this,
-                        "Nessuna impronta registrata nel dispositivo",
-                        Toast.LENGTH_SHORT).show();
+
+                showPinDialog(onSuccess);
                 return;
 
             default:
                 Toast.makeText(this,
-                        "Autenticazione non supportata",
+                        "Autenticazione non disponibile",
                         Toast.LENGTH_SHORT).show();
                 return;
         }
@@ -403,6 +394,36 @@ public class MainActivity extends AppCompatActivity {
         adapter.setAggregation(aggregation);
         applyFilters(aggregation, dateRange);
 
-         viewModel.getNotes().observe(this, this::updateAdapter);
+     }
+
+    private void showPinDialog(Runnable onSuccess) {
+
+        android.widget.EditText input = new android.widget.EditText(this);
+        input.setInputType(android.text.InputType.TYPE_CLASS_NUMBER |
+                android.text.InputType.TYPE_NUMBER_VARIATION_PASSWORD);
+
+        new android.app.AlertDialog.Builder(this)
+                .setTitle("Inserisci PIN")
+                .setView(input)
+                .setPositiveButton("OK", (dialog, which) -> {
+
+                    String pin = input.getText().toString();
+
+                    SharedPreferences prefs =
+                            getSharedPreferences(SettingsActivity.PREFS_NAME, MODE_PRIVATE);
+
+                    String savedPin = prefs.getString(KEY_PIN, null);
+
+                    if (savedPin != null && savedPin.equals(pin)) {
+                        onSuccess.run();
+                    } else {
+                        android.widget.Toast.makeText(this,
+                                "PIN errato",
+                                android.widget.Toast.LENGTH_SHORT).show();
+                    }
+                })
+                .setNegativeButton("Annulla", null)
+                .show();
     }
+
 }

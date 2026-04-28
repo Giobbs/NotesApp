@@ -101,7 +101,7 @@ public class EditNoteActivity extends AppCompatActivity {
 
         if (currentNote.isProtected) {
             currentNote.encryptedContent = content;
-            currentNote.content = ""; // evita leak
+            currentNote.content = content;
         } else {
             currentNote.content = content;
             currentNote.encryptedContent = null;

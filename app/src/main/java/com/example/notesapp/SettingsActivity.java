@@ -15,9 +15,11 @@ public class SettingsActivity extends AppCompatActivity {
     public static final String KEY_THEME = "theme";
     public static final String KEY_AGGREGATION = "aggregation";
     public static final String KEY_DATE_RANGE = "date_range";
+    public static final String KEY_PIN = "user_pin";
     @Override
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
+
         setContentView(R.layout.activity_settings);
 
         SharedPreferences prefs = getSharedPreferences(PREFS_NAME, MODE_PRIVATE);
@@ -127,6 +129,32 @@ public class SettingsActivity extends AppCompatActivity {
             prefs.edit()
                     .putString(KEY_DATE_RANGE, value)
                     .apply();
+        });
+
+        android.widget.EditText editPin = findViewById(R.id.editPin);
+        android.widget.Button btnSavePin = findViewById(R.id.btnSavePin);
+
+        String savedPin = prefs.getString(KEY_PIN, "");
+        editPin.setText(savedPin);
+
+        btnSavePin.setOnClickListener(v -> {
+
+            String pin = editPin.getText().toString().trim();
+
+            if (pin.length() < 4) {
+                android.widget.Toast.makeText(this,
+                        "PIN troppo corto",
+                        android.widget.Toast.LENGTH_SHORT).show();
+                return;
+            }
+
+            prefs.edit()
+                    .putString(KEY_PIN, pin)
+                    .apply();
+
+            android.widget.Toast.makeText(this,
+                    "PIN salvato",
+                    android.widget.Toast.LENGTH_SHORT).show();
         });
     }
     public static void applyTheme(SharedPreferences prefs) {

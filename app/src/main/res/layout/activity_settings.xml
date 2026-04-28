@@ -121,6 +121,31 @@
                 android:layout_height="wrap_content"
                 android:text="Ultimo anno"/>
         </RadioGroup>
+
+        <!-- =========================
+             PIN SECURITY
+        ========================= -->
+        <TextView
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:text="Sicurezza PIN"
+            android:textStyle="bold"
+            android:textSize="16sp"
+            android:paddingTop="16dp"
+            android:paddingBottom="8dp"/>
+
+        <EditText
+            android:id="@+id/editPin"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:hint="Imposta PIN (4-6 cifre)"
+            android:inputType="numberPassword"/>
+
+        <Button
+            android:id="@+id/btnSavePin"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:text="Salva PIN"/>
     </LinearLayout>
 
 </androidx.coordinatorlayout.widget.CoordinatorLayout>

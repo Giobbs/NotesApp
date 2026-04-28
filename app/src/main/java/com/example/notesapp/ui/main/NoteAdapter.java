@@ -315,7 +315,7 @@ public class NoteAdapter extends RecyclerView.Adapter<RecyclerView.ViewHolder> {
             // TEXT
             // =========================
             title.setText(note.getTitle());
-            content.setText(note.isProtected ? "🔒 Protetta" : note.getContent());
+            content.setText(note.isProtected ? "🔒 Protetta" : note.getSafeContent());
 
             long now = System.currentTimeMillis();
 
