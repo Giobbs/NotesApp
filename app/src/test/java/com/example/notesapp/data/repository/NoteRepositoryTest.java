@@ -136,7 +136,7 @@ public class NoteRepositoryTest {
     public void updateTags_callsDaoWithTagsAndTimestamp() throws InterruptedException {
         CountDownLatch latch = new CountDownLatch(1);
 
-        repository.updateTags(88L, "home,urgent", latch::countDown);
+        repository.updateTags(88L, "home,urgent");
 
         boolean completed = latch.await(2, TimeUnit.SECONDS);
         assertEquals(true, completed);

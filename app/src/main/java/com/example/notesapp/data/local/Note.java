@@ -7,6 +7,12 @@ import androidx.room.PrimaryKey;
 
 import com.example.notesapp.security.CryptoManager;
 
+import java.util.ArrayList;
+import java.util.LinkedHashSet;
+import java.util.List;
+import java.util.Locale;
+import java.util.Set;
+
 @Entity(tableName = "notes")
 public class Note {
 
@@ -211,5 +217,113 @@ public class Note {
 
     public void setEncryptedContent(String encryptedContent) {
         this.encryptedContent = encryptedContent;
+    }
+
+    public List<String> getTagList() {
+
+        if (tags == null || tags.trim().isEmpty()) {
+            return new ArrayList<>();
+        }
+
+        String[] split = tags.split(",");
+
+        Set<String> clean = new LinkedHashSet<>();
+
+        for (String t : split) {
+            if (t == null) continue;
+
+            String tag = t.trim().toLowerCase(Locale.ROOT);
+
+            if (!tag.isEmpty()) {
+                clean.add(tag);
+            }
+        }
+
+        return new ArrayList<>(clean);
+    }
+
+    public void addTag(String newTag) {
+        List<String> list = getTagList();
+
+        String clean = newTag.trim().toLowerCase();
+        if (!list.contains(clean)) {
+            list.add(clean);
+        }
+
+        tags = String.join(",", list);
+    }
+
+    public void setTagsFromList(List<String> list) {
+
+        if (list == null) {
+            this.tags = "";
+            return;
+        }
+
+        Set<String> clean = new LinkedHashSet<>();
+
+        for (String t : list) {
+            if (t == null) continue;
+
+            String tag = t.trim().toLowerCase(Locale.ROOT);
+
+            if (!tag.isEmpty()) {
+                clean.add(tag);
+            }
+        }
+
+        this.tags = String.join(",", clean);
+    }
+
+    public void addTagSafe(String newTag) {
+
+        if (newTag == null) return;
+
+        String tag = newTag.trim().toLowerCase(Locale.ROOT);
+
+        if (tag.isEmpty()) return;
+
+        List<String> current = getTagList();
+
+        if (!current.contains(tag)) {
+            current.add(tag);
+        }
+
+        setTagsFromList(current);
+    }
+
+    public void removeTag(String tagToRemove) {
+
+        if (tagToRemove == null) return;
+
+        String target = tagToRemove.trim().toLowerCase(Locale.ROOT);
+
+        List<String> current = getTagList();
+
+        current.removeIf(t -> t.equals(target));
+
+        setTagsFromList(current);
+    }
+
+    public static List<String> parseTags(String input) {
+
+        if (input == null || input.trim().isEmpty()) {
+            return new ArrayList<>();
+        }
+
+        Set<String> clean = new LinkedHashSet<>();
+
+        String normalized = input.toLowerCase(Locale.ROOT);
+
+        String[] split = normalized.split("[,;\\s]+");
+
+        for (String t : split) {
+            String tag = t.trim();
+            if (!tag.isEmpty()) {
+                clean.add(tag);
+            }
+        }
+
+        return new ArrayList<>(clean);
     }
 }

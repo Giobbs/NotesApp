@@ -155,11 +155,15 @@ public class NoteAdapter extends RecyclerView.Adapter<RecyclerView.ViewHolder> {
 
         for (Note n : lastNotes) {
 
-            String key = (n.getTags() == null || n.getTags().isEmpty())
-                    ? "Senza tag"
-                    : n.getTags().split(",")[0].trim();
+            List<String> tags = n.getTagList();
 
-            map.computeIfAbsent(key, k -> new ArrayList<>()).add(n);
+            if (tags.isEmpty()) {
+                map.computeIfAbsent("Senza tag", k -> new ArrayList<>()).add(n);
+            } else {
+                for (String tag : tags) {
+                    map.computeIfAbsent(tag, k -> new ArrayList<>()).add(n);
+                }
+            }
         }
 
         for (Map.Entry<String, List<Note>> e : map.entrySet()) {
@@ -175,7 +179,6 @@ public class NoteAdapter extends RecyclerView.Adapter<RecyclerView.ViewHolder> {
             }
         }
     }
-
     private void buildByDate() {
 
         long now = System.currentTimeMillis();
@@ -470,7 +473,9 @@ public class NoteAdapter extends RecyclerView.Adapter<RecyclerView.ViewHolder> {
                 builder.setPositiveButton("OK", (dialog, which) -> {
                     String tag = input.getText().toString().trim();
                     if (!tag.isEmpty()) {
-                        listener.onAddTag(note, tag);
+                        if (listener != null) {
+                            listener.onAddTag(note, tag);
+                        }
                     }
                 });
 

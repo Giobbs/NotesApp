@@ -27,6 +27,7 @@ import org.json.JSONObject;
 import java.io.OutputStream;
 import java.nio.charset.StandardCharsets;
 import java.util.ArrayList;
+import java.util.Arrays;
 import java.util.List;
 import java.util.Locale;
 import java.util.Set;
@@ -107,9 +108,27 @@ public class ImportExportActivity extends AppCompatActivity {
             @Override
             public void onShare(Note note) {}
 
-            @Override
-            public void onAddTag(Note note, String tag) {}
+             @Override
+            public void onAddTag(Note note, String tag) {
 
+                if (note == null || tag == null || tag.trim().isEmpty()) return;
+
+                new Thread(() -> {
+
+                    Note dbNote = noteDao.getNoteByIdSync(note.id);
+                    if (dbNote == null) return;
+
+                    dbNote.addTagSafe(tag.trim());
+
+                    noteDao.update(dbNote);
+
+                    runOnUiThread(() -> {
+                        toast("Tag aggiunto");
+                        loadNotesWithSettings();
+                    });
+
+                }).start();
+            }
             @Override
             public void onRestore(Note note) {
                 if (note == null || !note.isDeleted()) return;
@@ -318,8 +337,7 @@ public class ImportExportActivity extends AppCompatActivity {
                             n.content = o.optString("content");
                             n.createdAt = o.optLong("createdAt", now);
                             n.updatedAt = now;
-                            n.setTags(o.optString("tags"));
-
+                            n.setTagsFromList(Note.parseTags(o.optString("tags", "")));
                             list.add(n);
                         }
 

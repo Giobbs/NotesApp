@@ -91,11 +91,16 @@ public class NoteRepository {
     // =========================
     // ✏️ UPDATE TAGS
     // =========================
-    public void updateTags(long noteId, String tags, Runnable onComplete) {
-        executor.execute(() -> {
-            noteDao.updateTags(noteId, tags, System.currentTimeMillis());
+    public void updateTags(long noteId, String newTag) {
 
-            if (onComplete != null) onComplete.run();
+        executor.execute(() -> {
+
+            Note note = noteDao.getNoteByIdSync(noteId);
+            if (note == null) return;
+
+            note.addTagSafe(newTag);
+
+            noteDao.update(note);
         });
     }
 
@@ -154,4 +159,6 @@ public class NoteRepository {
     public LiveData<List<Note>> getNotesByTag(String tag) {
         return noteDao.getByTag(tag);
     }
+
+
 }

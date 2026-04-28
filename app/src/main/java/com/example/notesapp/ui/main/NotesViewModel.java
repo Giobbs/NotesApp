@@ -120,6 +120,6 @@ public class NotesViewModel extends AndroidViewModel {
     // FIX: TAG UPDATE (per MainActivity)
     // =========================
     public void updateTags(long noteId, String tags) {
-        repository.updateTags(noteId, tags, null);
+        repository.updateTags(noteId, tags);
     }
 }
