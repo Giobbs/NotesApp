@@ -40,7 +40,7 @@ public class MainActivity extends AppCompatActivity {
     private ImageButton btnSettings;
 
     private boolean pinnedActive = false;
-
+    private long currentLimit = 0;
     private enum SortState {
         DATE_DESC,
         DATE_ASC,
@@ -80,32 +80,18 @@ public class MainActivity extends AppCompatActivity {
         adapter.setAggregation(aggregation);
 
         long now = System.currentTimeMillis();
-        long limit;
 
         switch (range) {
             case "30":
-                limit = now - (30L * 24 * 60 * 60 * 1000);
+                currentLimit = now - (30L * 24 * 60 * 60 * 1000);
                 break;
             case "365":
-                limit = now - (365L * 24 * 60 * 60 * 1000);
+                currentLimit = now - (365L * 24 * 60 * 60 * 1000);
                 break;
             default:
-                limit = now - (7L * 24 * 60 * 60 * 1000);
+                currentLimit = now - (7L * 24 * 60 * 60 * 1000);
                 break;
         }
-
-        viewModel.getNotes().observe(this, notes -> {
-
-            List<Note> filtered = new ArrayList<>();
-
-            for (Note n : notes) {
-                if (n.getUpdatedAt() >= limit) {
-                    filtered.add(n);
-                }
-            }
-
-            adapter.setNotes(filtered); // aggregation già dentro adapter
-        });
     }
     private void initViews() {
         searchView = findViewById(R.id.searchView);
@@ -126,10 +112,30 @@ public class MainActivity extends AppCompatActivity {
     }
 
     private void setupViewModel() {
+
         viewModel = new ViewModelProvider(this).get(NotesViewModel.class);
-         viewModel.setShowPinnedOnly(false);
+        viewModel.setShowPinnedOnly(false);
+
         btnPinned.setText("Pinned OFF");
+
+        viewModel.getNotes().removeObservers(this);
+        viewModel.getNotes().observe(this, this::updateAdapter);
     }
+
+    private void updateAdapter(List<Note> notes) {
+
+        List<Note> filtered = new ArrayList<>();
+
+        for (Note n : notes) {
+            if (n.getUpdatedAt() >= currentLimit) {
+                filtered.add(n);
+            }
+        }
+
+        adapter.setNotes(filtered, adapter.getAggregation());
+    }
+
+
 
     private void setupAdapter() {
 
@@ -340,5 +346,20 @@ public class MainActivity extends AppCompatActivity {
 
     private String clean(String s) {
         return s == null ? "" : s.trim();
+    }
+
+    @Override
+    protected void onResume() {
+        super.onResume();
+
+        SharedPreferences prefs = getSharedPreferences(SettingsActivity.PREFS_NAME, MODE_PRIVATE);
+
+        String aggregation = prefs.getString(SettingsActivity.KEY_AGGREGATION, "none");
+        String dateRange = prefs.getString(SettingsActivity.KEY_DATE_RANGE, "7");
+
+        adapter.setAggregation(aggregation);
+        applyFilters(aggregation, dateRange);
+
+         viewModel.getNotes().observe(this, this::updateAdapter);
     }
 }

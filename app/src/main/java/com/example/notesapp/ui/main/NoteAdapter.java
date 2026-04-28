@@ -1,17 +1,13 @@
 package com.example.notesapp.ui.main;
 
-import android.app.AlertDialog;
-import android.text.format.DateUtils;
 import android.view.LayoutInflater;
 import android.view.View;
 import android.view.ViewGroup;
 import android.widget.CheckBox;
-import android.widget.EditText;
 import android.widget.ImageButton;
 import android.widget.TextView;
 
 import androidx.annotation.NonNull;
-import androidx.core.content.ContextCompat;
 import androidx.recyclerview.widget.RecyclerView;
 
 import com.example.notesapp.R;
@@ -22,23 +18,27 @@ import java.util.*;
 
 public class NoteAdapter extends RecyclerView.Adapter<RecyclerView.ViewHolder> {
 
-    // =========================
-    // TYPES
-    // =========================
     private static final int TYPE_HEADER = 0;
     private static final int TYPE_NOTE = 1;
 
-    private List<NoteListItem> items = new ArrayList<>();
-    private OnNoteActionListener listener;
+    private final Set<String> expandedHeaders = new HashSet<>();
 
+    private List<NoteListItem> items = new ArrayList<>();
+    private List<Note> lastNotes = new ArrayList<>();
+
+    private OnNoteActionListener listener;
     private final Set<Long> selectedNotes = new HashSet<>();
+
     private String aggregation = "none";
 
-    public void setNotes(List<Note> notes) {
-        setNotes(notes, aggregation);
+    public String getAggregation() {
+        return aggregation;
+
     }
+
     public void setAggregation(String aggregation) {
         this.aggregation = aggregation;
+        rebuild();
     }
 
     public enum Mode {
@@ -58,17 +58,19 @@ public class NoteAdapter extends RecyclerView.Adapter<RecyclerView.ViewHolder> {
     }
 
     // =========================
-    // MODEL WRAPPER
+    // MODEL
     // =========================
     private static class NoteListItem {
         int type;
         String header;
+        String groupKey;
         Note note;
 
-        static NoteListItem header(String text) {
+        static NoteListItem header(String text, String key) {
             NoteListItem item = new NoteListItem();
             item.type = TYPE_HEADER;
             item.header = text;
+            item.groupKey = key;
             return item;
         }
 
@@ -85,9 +87,13 @@ public class NoteAdapter extends RecyclerView.Adapter<RecyclerView.ViewHolder> {
     // =========================
     public interface OnNoteActionListener {
         void onNoteClick(Note note);
+
         void onDelete(Note note);
+
         void onPin(Note note);
+
         void onShare(Note note);
+
         void onAddTag(Note note, String tag);
     }
 
@@ -96,78 +102,106 @@ public class NoteAdapter extends RecyclerView.Adapter<RecyclerView.ViewHolder> {
     }
 
     // =========================
-    // SET DATA (CORE LOGIC)
+    // SET NOTES
     // =========================
     public void setNotes(List<Note> newNotes, String aggregation) {
+        this.lastNotes = new ArrayList<>(newNotes != null ? newNotes : new ArrayList<>());
+        this.aggregation = aggregation != null ? aggregation : "none";
+        rebuild();
+    }
 
+    private void rebuild() {
         items.clear();
 
-        if (newNotes == null) {
+        if (lastNotes.isEmpty()) {
             notifyDataSetChanged();
             return;
         }
 
-        if ("tag".equals(aggregation)) {
+        switch (aggregation) {
 
-            Map<String, List<Note>> map = new HashMap<>();
+            case "tag":
+                buildByTag();
+                break;
 
-            for (Note n : newNotes) {
-                String tag = (n.getTags() == null || n.getTags().isEmpty())
-                        ? "Senza tag"
-                        : n.getTags().split(",")[0].trim();
+            case "date":
+                buildByDate();
+                break;
 
-                map.computeIfAbsent(tag, k -> new ArrayList<>()).add(n);
-            }
-
-            for (String tag : map.keySet()) {
-                items.add(NoteListItem.header("🏷 " + tag));
-                for (Note n : map.get(tag)) {
-                    items.add(NoteListItem.note(n));
-                }
-            }
-
-        } else if ("date".equals(aggregation)) {
-
-            long now = System.currentTimeMillis();
-
-            List<Note> today = new ArrayList<>();
-            List<Note> week = new ArrayList<>();
-            List<Note> older = new ArrayList<>();
-
-            for (Note n : newNotes) {
-                long diff = now - n.getUpdatedAt();
-
-                if (diff < 24L * 60 * 60 * 1000) {
-                    today.add(n);
-                } else if (diff < 7L * 24 * 60 * 60 * 1000) {
-                    week.add(n);
-                } else {
-                    older.add(n);
-                }
-            }
-
-            if (!today.isEmpty()) {
-                items.add(NoteListItem.header("📅 Oggi"));
-                today.forEach(n -> items.add(NoteListItem.note(n)));
-            }
-
-            if (!week.isEmpty()) {
-                items.add(NoteListItem.header("📅 Ultimi 7 giorni"));
-                week.forEach(n -> items.add(NoteListItem.note(n)));
-            }
-
-            if (!older.isEmpty()) {
-                items.add(NoteListItem.header("📅 Più vecchie"));
-                older.forEach(n -> items.add(NoteListItem.note(n)));
-            }
-
-        } else {
-            for (Note n : newNotes) {
-                items.add(NoteListItem.note(n));
-            }
+            default:
+                buildFlat();
+                break;
         }
 
         notifyDataSetChanged();
+    }
+
+    private void buildFlat() {
+        for (Note n : lastNotes) {
+            items.add(NoteListItem.note(n));
+        }
+    }
+
+    private void buildByTag() {
+
+        Map<String, List<Note>> map = new LinkedHashMap<>();
+
+        for (Note n : lastNotes) {
+
+            String key = (n.getTags() == null || n.getTags().isEmpty())
+                    ? "Senza tag"
+                    : n.getTags().split(",")[0].trim();
+
+            map.computeIfAbsent(key, k -> new ArrayList<>()).add(n);
+        }
+
+        for (Map.Entry<String, List<Note>> e : map.entrySet()) {
+
+            String key = e.getKey();
+
+            items.add(NoteListItem.header("🏷 " + key, key));
+
+            if (expandedHeaders.contains(key)) {
+                for (Note n : e.getValue()) {
+                    items.add(NoteListItem.note(n));
+                }
+            }
+        }
+    }
+
+    private void buildByDate() {
+
+        long now = System.currentTimeMillis();
+
+        List<Note> today = new ArrayList<>();
+        List<Note> week = new ArrayList<>();
+        List<Note> older = new ArrayList<>();
+
+        for (Note n : lastNotes) {
+
+            long diff = now - n.getUpdatedAt();
+
+            if (diff < 24L * 60 * 60 * 1000) today.add(n);
+            else if (diff < 7L * 24 * 60 * 60 * 1000) week.add(n);
+            else older.add(n);
+        }
+
+        addGroup("TODAY", "📅 Oggi", today);
+        addGroup("WEEK", "📅 Ultimi 7 giorni", week);
+        addGroup("OLDER", "📅 Più vecchie", older);
+    }
+
+    private void addGroup(String key, String title, List<Note> list) {
+
+        if (list.isEmpty()) return;
+
+        items.add(NoteListItem.header(title, key));
+
+        if (expandedHeaders.contains(key)) {
+            for (Note n : list) {
+                items.add(NoteListItem.note(n));
+            }
+        }
     }
 
     // =========================
@@ -204,16 +238,16 @@ public class NoteAdapter extends RecyclerView.Adapter<RecyclerView.ViewHolder> {
         NoteListItem item = items.get(position);
 
         if (item.type == TYPE_HEADER) {
-            ((HeaderViewHolder) holder).bind(item.header);
+            ((HeaderViewHolder) holder).bind(item.groupKey, item.header);
         } else {
-            ((NoteViewHolder) holder).bind(item.note, listener, mode, selectedNotes);
+            ((NoteViewHolder) holder).bind(item.note, mode);
         }
     }
 
     // =========================
-    // HEADER VIEW HOLDER
+    // HEADER
     // =========================
-    static class HeaderViewHolder extends RecyclerView.ViewHolder {
+    class HeaderViewHolder extends RecyclerView.ViewHolder {
 
         TextView title;
 
@@ -222,20 +256,30 @@ public class NoteAdapter extends RecyclerView.Adapter<RecyclerView.ViewHolder> {
             title = itemView.findViewById(R.id.headerTitle);
         }
 
-        void bind(String text) {
+        void bind(String key, String text) {
+
             title.setText(text);
+
+            itemView.setOnClickListener(v -> {
+                if (expandedHeaders.contains(key)) {
+                    expandedHeaders.remove(key);
+                } else {
+                    expandedHeaders.add(key);
+                }
+                rebuild();
+            });
         }
     }
 
     // =========================
-    // NOTE VIEW HOLDER
+    // NOTE
     // =========================
-    static class NoteViewHolder extends RecyclerView.ViewHolder {
+    class NoteViewHolder extends RecyclerView.ViewHolder {
 
-        TextView title, content, updatedAt, tags;
-        ImageButton delete, pin, share, addTag;
-        MaterialCardView card;
+        TextView title, content, updatedAt;
         CheckBox checkSelect;
+        MaterialCardView card;
+         ImageButton btnShare, btnPin, btnDelete,btnTag;
 
         public NoteViewHolder(@NonNull View itemView) {
             super(itemView);
@@ -243,142 +287,178 @@ public class NoteAdapter extends RecyclerView.Adapter<RecyclerView.ViewHolder> {
             title = itemView.findViewById(R.id.title);
             content = itemView.findViewById(R.id.content);
             updatedAt = itemView.findViewById(R.id.updatedAt);
-            tags = itemView.findViewById(R.id.tags);
-
-            delete = itemView.findViewById(R.id.btnDelete);
-            pin = itemView.findViewById(R.id.btnPin);
-            share = itemView.findViewById(R.id.btnShare);
-            addTag = itemView.findViewById(R.id.btnAddTag);
-
-            card = itemView.findViewById(R.id.cardNote);
             checkSelect = itemView.findViewById(R.id.checkSelect);
+            card = itemView.findViewById(R.id.cardNote);
+
+            btnShare = itemView.findViewById(R.id.btnShare);
+            btnPin = itemView.findViewById(R.id.btnPin);
+            btnDelete = itemView.findViewById(R.id.btnDelete);
+            btnTag = itemView.findViewById(R.id.btnAddTag);
         }
 
-        void bind(Note note, OnNoteActionListener listener, Mode mode, Set<Long> selectedNotes) {
+        void bind(Note note, Mode mode) {
 
             if (note == null) return;
 
-            boolean selectable = (mode == Mode.SELECTABLE);
+            boolean selectable = mode == Mode.SELECTABLE;
+            boolean pinned = note.isPinned();
 
+            // =========================
+            // TEXT
+            // =========================
             title.setText(note.getTitle());
+            content.setText(note.isProtected ? "🔒 Protetta" : note.getContent());
 
-            content.setText(
-                    note.isProtected ? "🔒 Contenuto protetto" : note.getContent()
-            );
+            long now = System.currentTimeMillis();
+            long diffMillis = now - note.getUpdatedAt();
+            long diffMinutes = diffMillis / (60 * 1000);
 
-            // =========================
-            // DATE
-            // =========================
-            java.text.SimpleDateFormat fullDateFormat =
-                    new java.text.SimpleDateFormat("dd/MM/yyyy", java.util.Locale.getDefault());
+            String modifiedText;
 
-            String created = fullDateFormat.format(new java.util.Date(note.getCreatedAt()));
-
-            CharSequence updated = android.text.format.DateUtils.getRelativeTimeSpanString(
-                    note.getUpdatedAt(),
-                    System.currentTimeMillis(),
-                    android.text.format.DateUtils.MINUTE_IN_MILLIS
-            );
-
-            updatedAt.setText("📅 " + created + " • ✏ " + updated);
-
-            // =========================
-            // TAGS
-            // =========================
-            if (note.getTags() != null && !note.getTags().isEmpty()) {
-                tags.setVisibility(View.VISIBLE);
-                tags.setText(note.getTags().replace(",", " • "));
+            if (diffMinutes < 1) {
+                modifiedText = "ora";
             } else {
-                tags.setVisibility(View.GONE);
+                modifiedText = diffMinutes + " min fa";
             }
 
+            updatedAt.setText(
+                    "📅 " + new java.text.SimpleDateFormat(
+                            "dd/MM/yyyy",
+                            java.util.Locale.getDefault()
+                    ).format(new java.util.Date(note.getCreatedAt()))
+                            + " • ✏️ " + modifiedText
+            );
             // =========================
-            // CLICK NOTE
+            // SELECT
+            // =========================
+            checkSelect.setVisibility(selectable ? View.VISIBLE : View.GONE);
+            checkSelect.setChecked(selectedNotes.contains(note.id));
+
+            // =========================
+            // CARD CLICK
             // =========================
             card.setOnClickListener(v -> {
-                if (listener != null && !selectable) {
+                if (!selectable && listener != null) {
                     listener.onNoteClick(note);
                 }
             });
 
-            int actionVisibility = selectable ? View.GONE : View.VISIBLE;
+            // =========================
+            // RESET PIN STATE (FONDAMENTALE)
+            // =========================
+            btnPin.clearColorFilter();
+            btnPin.setScaleX(1f);
+            btnPin.setScaleY(1f);
+            btnPin.setAlpha(0.5f);
 
-            delete.setVisibility(actionVisibility);
-            pin.setVisibility(actionVisibility);
-            share.setVisibility(actionVisibility);
-            addTag.setVisibility(actionVisibility);
+            card.setStrokeWidth(0);
 
-            if (!selectable) {
+            // =========================
+            // APPLY PIN STATE
+            // =========================
+            if (pinned) {
 
-                delete.setOnClickListener(v -> {
-                    if (listener != null) listener.onDelete(note);
-                });
+                btnPin.setColorFilter(android.graphics.Color.parseColor("#FFC107"));
 
-                pin.setOnClickListener(v -> {
-                    if (listener != null) listener.onPin(note);
-                });
+                btnPin.setScaleX(1.1f);
+                btnPin.setScaleY(1.1f);
+                btnPin.setAlpha(1f);
 
-                share.setOnClickListener(v -> {
-                    if (listener != null) listener.onShare(note);
-                });
-
-                addTag.setOnClickListener(v -> {
-
-                    if (listener == null) return;
-
-                    AlertDialog.Builder builder =
-                            new AlertDialog.Builder(itemView.getContext());
-
-                    builder.setTitle("Aggiungi tag");
-
-                    EditText input = new EditText(itemView.getContext());
-                    builder.setView(input);
-
-                    builder.setPositiveButton("OK", (dialog, which) -> {
-                        String tag = input.getText().toString().trim();
-                        if (!tag.isEmpty()) {
-                            listener.onAddTag(note, tag);
-                        }
-                    });
-
-                    builder.setNegativeButton("Annulla", null);
-                    builder.show();
-                });
+                card.setStrokeWidth(4);
+                card.setStrokeColor(android.graphics.Color.parseColor("#FF9800"));
             }
 
-            checkSelect.setVisibility(selectable ? View.VISIBLE : View.GONE);
+            // =========================
+            // ICON SEMPRE COERENTE
+            // =========================
+            btnPin.setImageResource(
+                    pinned
+                            ? android.R.drawable.btn_star_big_on
+                            : android.R.drawable.btn_star_big_off
+            );
 
-            if (selectable) {
-                checkSelect.setOnCheckedChangeListener(null);
-                checkSelect.setChecked(selectedNotes.contains(note.id));
+            // =========================
+            // SHARE
+            // =========================
+            btnShare.setOnClickListener(v -> {
+                if (listener != null) listener.onShare(note);
+            });
 
-                checkSelect.setOnCheckedChangeListener((buttonView, isChecked) -> {
-                    if (isChecked) selectedNotes.add(note.id);
-                    else selectedNotes.remove(note.id);
-                });
+            // =========================
+            // DELETE
+            // =========================
+            btnDelete.setOnClickListener(v -> {
+                if (listener != null) listener.onDelete(note);
+            });
+            // =========================
+            // PIN
+            // =========================
+            btnPin.setOnClickListener(v -> {
 
-            } else {
-                checkSelect.setChecked(false);
-            }
+                if (listener == null) return;
 
-            if (!selectable) {
-                boolean pinned = note.isPinned();
-
-                pin.setImageResource(
-                        pinned ? android.R.drawable.star_on : android.R.drawable.star_off
+                v.performHapticFeedback(
+                        android.view.HapticFeedbackConstants.VIRTUAL_KEY
                 );
 
-                card.setStrokeWidth(pinned ? 6 : 0);
+                v.animate()
+                        .scaleX(0.85f)
+                        .scaleY(0.85f)
+                        .setDuration(80)
+                        .withEndAction(() -> v.animate()
+                                .scaleX(1f)
+                                .scaleY(1f)
+                                .setDuration(120)
+                                .start())
+                        .start();
 
-                card.setStrokeColor(
-                        pinned
-                                ? ContextCompat.getColor(itemView.getContext(), android.R.color.holo_orange_light)
-                                : ContextCompat.getColor(itemView.getContext(), android.R.color.transparent)
-                );
-            } else {
-                card.setStrokeWidth(0);
-            }
+                int pos = getBindingAdapterPosition();
+                if (pos == RecyclerView.NO_POSITION) return;
 
+                Note currentNote = items.get(pos).note;
+
+                if (listener != null) {
+                    listener.onPin(note);
+                }
+
+                if (listener != null) {
+                    listener.onPin(currentNote);
+                }
+            });
+
+            // =========================
+            // TAG
+            // =========================
+            btnTag.setOnClickListener(v -> {
+
+                if (listener == null) return;
+
+                android.app.AlertDialog.Builder builder =
+                        new android.app.AlertDialog.Builder(v.getContext());
+
+                final android.widget.EditText input =
+                        new android.widget.EditText(v.getContext());
+
+                input.setHint("Nuovo tag");
+
+                builder.setTitle("Aggiungi tag");
+                builder.setView(input);
+
+                builder.setPositiveButton("OK", (dialog, which) -> {
+                    String tag = input.getText().toString().trim();
+                    if (!tag.isEmpty()) {
+                        listener.onAddTag(note, tag);
+                    }
+                });
+
+                builder.setNegativeButton("Annulla", null);
+
+                builder.show();
+            });
+
+            // =========================
+            // PROTECTION
+            // =========================
             card.setAlpha(note.isProtected ? 0.7f : 1f);
         }
     }
