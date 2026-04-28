@@ -308,12 +308,15 @@ public class ImportExportActivity extends AppCompatActivity {
     private void importJson() {
 
         EditText input = new EditText(this);
-        input.setHint("Incolla JSON qui");
+
+        input.setHint("Modifica o incolla JSON");
+        input.setMinLines(10);
+        input.setText(generateJsonTemplate());
 
         new AlertDialog.Builder(this)
                 .setTitle("Import JSON")
                 .setView(input)
-                .setPositiveButton("Importa", (dialog, which) -> {
+                .setPositiveButton("Preview", (dialog, which) -> {
 
                     String json = input.getText().toString();
 
@@ -326,34 +329,86 @@ public class ImportExportActivity extends AppCompatActivity {
                         JSONArray arr = new JSONArray(json);
                         List<Note> list = new ArrayList<>();
 
+                        long now = System.currentTimeMillis();
+
                         for (int i = 0; i < arr.length(); i++) {
 
                             JSONObject o = arr.getJSONObject(i);
-                            long now = System.currentTimeMillis();
 
                             Note n = new Note();
-                            n.uuid = o.optString("uuid");
-                            n.title = o.optString("title");
-                            n.content = o.optString("content");
+                            n.uuid = o.optString("uuid", java.util.UUID.randomUUID().toString());
+                            n.title = o.optString("title", "");
+                            n.content = o.optString("content", "");
                             n.createdAt = o.optLong("createdAt", now);
                             n.updatedAt = now;
                             n.setTagsFromList(Note.parseTags(o.optString("tags", "")));
+
                             list.add(n);
                         }
 
-                        new Thread(() -> {
-                            noteDao.insertAll(list);
-
-                            runOnUiThread(() -> {
-                                toast("Import completato: " + list.size());
-                                loadNotesWithSettings();
-                            });
-
-                        }).start();
+                        showImportPreview(list);
 
                     } catch (Exception e) {
                         toast("JSON non valido");
                     }
+
+                })
+                .setNegativeButton("Annulla", null)
+                .show();
+    }
+    private String generateJsonTemplate() {
+
+        long now = System.currentTimeMillis();
+
+        String uuid1 = java.util.UUID.randomUUID().toString();
+        String uuid2 = java.util.UUID.randomUUID().toString();
+
+        return "[\n" +
+                "  {\n" +
+                "    \"uuid\": \"" + uuid1 + "\",\n" +
+                "    \"title\": \"Titolo nota\",\n" +
+                "    \"content\": \"Contenuto della nota\",\n" +
+                "    \"tags\": \"work,idea\",\n" +
+                "    \"createdAt\": " + now + ",\n" +
+                "    \"updatedAt\": " + now + "\n" +
+                "  },\n" +
+                "  {\n" +
+                "    \"uuid\": \"" + uuid2 + "\",\n" +
+                "    \"title\": \"Seconda nota\",\n" +
+                "    \"content\": \"Contenuto...\",\n" +
+                "    \"tags\": \"\",\n" +
+                "    \"createdAt\": " + now + ",\n" +
+                "    \"updatedAt\": " + now + "\n" +
+                "  }\n" +
+                "]";
+    }
+    private void showImportPreview(List<Note> list) {
+
+        StringBuilder preview = new StringBuilder();
+
+        for (Note n : list) {
+            preview.append("• ")
+                    .append(n.title)
+                    .append(" (")
+                    .append(n.getTagList())
+                    .append(")\n");
+        }
+
+        new AlertDialog.Builder(this)
+                .setTitle("Anteprima import")
+                .setMessage(preview.toString())
+                .setPositiveButton("Conferma import", (d, w) -> {
+
+                    new Thread(() -> {
+                        noteDao.insertAll(list);
+
+                        runOnUiThread(() -> {
+                            toast("Import completato: " + list.size());
+                            loadNotesWithSettings();
+                        });
+
+                    }).start();
+
                 })
                 .setNegativeButton("Annulla", null)
                 .show();
