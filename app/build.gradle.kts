@@ -96,6 +96,9 @@ dependencies {
     // 🧪 TEST
     // =========================
     testImplementation(libs.junit)
+     testImplementation("junit:junit:4.13.2")
+    testImplementation("org.mockito:mockito-core:5.11.0")
+    testImplementation("org.mockito:mockito-inline:5.2.0")
     androidTestImplementation(libs.ext.junit)
     androidTestImplementation(libs.espresso.core)
 }
