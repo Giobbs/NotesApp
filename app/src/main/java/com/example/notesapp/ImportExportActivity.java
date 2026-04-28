@@ -1,12 +1,16 @@
 package com.example.notesapp;
 
+import android.content.Intent;
 import android.content.SharedPreferences;
+import android.net.Uri;
 import android.os.Bundle;
 import android.widget.Button;
 import android.widget.EditText;
 import android.widget.TextView;
 import android.widget.Toast;
 
+import androidx.activity.result.ActivityResultLauncher;
+import androidx.activity.result.contract.ActivityResultContracts;
 import androidx.appcompat.app.AlertDialog;
 import androidx.appcompat.app.AppCompatActivity;
 import androidx.recyclerview.widget.LinearLayoutManager;
@@ -20,8 +24,11 @@ import com.example.notesapp.ui.main.NoteAdapter;
 import org.json.JSONArray;
 import org.json.JSONObject;
 
+import java.io.OutputStream;
+import java.nio.charset.StandardCharsets;
 import java.util.ArrayList;
 import java.util.List;
+import java.util.Locale;
 import java.util.Set;
 
 public class ImportExportActivity extends AppCompatActivity {
@@ -37,6 +44,13 @@ public class ImportExportActivity extends AppCompatActivity {
     private NoteAdapter adapter;
 
     private List<Note> notes = new ArrayList<>();
+    private String pendingExportJson = "";
+
+    private final ActivityResultLauncher<String> saveExportLauncher =
+            registerForActivityResult(
+                    new ActivityResultContracts.CreateDocument("application/json"),
+                    this::saveExportToUri
+            );
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
@@ -56,12 +70,12 @@ public class ImportExportActivity extends AppCompatActivity {
         noteDao = AppDatabase.getInstance(this).noteDao();
 
         adapter = new NoteAdapter();
-
         adapter.setMode(NoteAdapter.Mode.IMPORT_EXPORT);
+
         adapter.setListener(new NoteAdapter.OnNoteActionListener() {
+
             @Override
-            public void onNoteClick(Note note) {
-            }
+            public void onNoteClick(Note note) {}
 
             @Override
             public void onDelete(Note note) {
@@ -70,39 +84,29 @@ public class ImportExportActivity extends AppCompatActivity {
                 new Thread(() -> {
                     noteDao.deleteById(note.id);
                     runOnUiThread(() -> {
-                        Toast.makeText(
-                                ImportExportActivity.this,
-                                "Nota eliminata definitivamente",
-                                Toast.LENGTH_SHORT
-                        ).show();
+                        toast("Nota eliminata definitivamente");
                         loadNotesWithSettings();
                     });
                 }).start();
             }
 
             @Override
-            public void onPin(Note note) {
-            }
+            public void onPin(Note note) {}
 
             @Override
-            public void onShare(Note note) {
-            }
+            public void onShare(Note note) {}
 
             @Override
-            public void onAddTag(Note note, String tag) {
-            }
+            public void onAddTag(Note note, String tag) {}
 
-             public void onRestore(Note note) {
+            @Override
+            public void onRestore(Note note) {
                 if (note == null || !note.isDeleted()) return;
 
                 new Thread(() -> {
                     noteDao.restore(note.id, System.currentTimeMillis());
                     runOnUiThread(() -> {
-                        Toast.makeText(
-                                ImportExportActivity.this,
-                                "Nota ripristinata",
-                                Toast.LENGTH_SHORT
-                        ).show();
+                        toast("Nota ripristinata");
                         loadNotesWithSettings();
                     });
                 }).start();
@@ -114,22 +118,7 @@ public class ImportExportActivity extends AppCompatActivity {
 
         loadNotesWithSettings();
 
-        btnSelectAll.setOnClickListener(v -> {
-
-            Set<Long> selected = adapter.getSelectedNotes();
-            if (notes == null) return;
-
-            if (selected.size() == notes.size()) {
-                selected.clear();
-            } else {
-                for (Note n : notes) {
-                    selected.add(n.id);
-                }
-            }
-
-            adapter.notifyDataSetChanged();
-        });
-
+        btnSelectAll.setOnClickListener(v -> toggleSelectAll());
         btnExport.setOnClickListener(v -> exportSelected());
         btnImport.setOnClickListener(v -> importJson());
     }
@@ -138,7 +127,6 @@ public class ImportExportActivity extends AppCompatActivity {
     // LOAD
     // =========================
     private void loadNotesWithSettings() {
-
         new Thread(() -> {
 
             notes = noteDao.getAllNotesSync();
@@ -152,12 +140,37 @@ public class ImportExportActivity extends AppCompatActivity {
     }
 
     // =========================
+    // SELECT ALL
+    // =========================
+    private void toggleSelectAll() {
+        if (notes == null || notes.isEmpty()) return;
+
+        Set<Long> selected = adapter.getSelectedNotes();
+
+        if (selected.size() == notes.size()) {
+            selected.clear();
+        } else {
+            selected.clear();
+            for (Note n : notes) {
+                selected.add(n.id);
+            }
+        }
+
+        adapter.notifyDataSetChanged();
+    }
+
+    // =========================
     // EXPORT
     // =========================
     private void exportSelected() {
 
         try {
             Set<Long> selected = adapter.getSelectedNotes();
+
+            if (selected.isEmpty()) {
+                toast("Seleziona almeno una nota");
+                return;
+            }
 
             JSONArray array = new JSONArray();
 
@@ -175,15 +188,87 @@ public class ImportExportActivity extends AppCompatActivity {
                 array.put(obj);
             }
 
-            txtResult.setText(array.toString(2));
+            String json = array.toString(2);
+            pendingExportJson = json;
+            txtResult.setText(json);
 
-            Toast.makeText(this,
-                    "Export: " + array.length() + " note",
-                    Toast.LENGTH_SHORT).show();
+            toast("Export: " + array.length() + " note");
+
+            showExportOptionsDialog();
 
         } catch (Exception e) {
             txtResult.setText("Errore export: " + e.getMessage());
         }
+    }
+
+    private void showExportOptionsDialog() {
+
+        String[] options = {
+                "Salva sul dispositivo (.json)",
+                "Condividi"
+        };
+
+        new AlertDialog.Builder(this)
+                .setTitle("Esporta note")
+                .setItems(options, (dialog, which) -> {
+
+                    if (which == 0) {
+                        String filename = String.format(
+                                Locale.getDefault(),
+                                "notes_export_%d.json",
+                                System.currentTimeMillis()
+                        );
+                        saveExportLauncher.launch(filename);
+
+                    } else if (which == 1) {
+                        shareExportJson();
+                    }
+                })
+                .setNegativeButton("Annulla", null)
+                .show();
+    }
+
+    private void shareExportJson() {
+        if (pendingExportJson == null || pendingExportJson.trim().isEmpty()) {
+            toast("Nessun export disponibile");
+            return;
+        }
+
+        Intent intent = new Intent(Intent.ACTION_SEND);
+        intent.setType("application/json");
+        intent.putExtra(Intent.EXTRA_SUBJECT, "Export Note");
+        intent.putExtra(Intent.EXTRA_TEXT, pendingExportJson);
+
+        startActivity(Intent.createChooser(intent, "Condividi export"));
+    }
+
+    // =========================
+    // SAVE FILE
+    // =========================
+    private void saveExportToUri(Uri uri) {
+        if (uri == null) return;
+
+        if (pendingExportJson == null || pendingExportJson.trim().isEmpty()) {
+            toast("Nessun export disponibile");
+            return;
+        }
+
+        new Thread(() -> {
+            try (OutputStream os = getContentResolver().openOutputStream(uri)) {
+
+                if (os == null) throw new IllegalStateException("OutputStream nullo");
+
+                os.write(pendingExportJson.getBytes(StandardCharsets.UTF_8));
+                os.flush();
+
+                runOnUiThread(() -> toast("File salvato"));
+
+            } catch (Exception e) {
+                runOnUiThread(() ->
+                        toast("Errore salvataggio: " + e.getMessage())
+                );
+            }
+        }).start();
     }
 
     // =========================
@@ -196,7 +281,6 @@ public class ImportExportActivity extends AppCompatActivity {
 
         new AlertDialog.Builder(this)
                 .setTitle("Import JSON")
-                .setMessage("Incolla il JSON delle note")
                 .setView(input)
                 .setPositiveButton("Importa", (dialog, which) -> {
 
@@ -209,7 +293,6 @@ public class ImportExportActivity extends AppCompatActivity {
 
                     try {
                         JSONArray arr = new JSONArray(json);
-
                         List<Note> list = new ArrayList<>();
 
                         for (int i = 0; i < arr.length(); i++) {
@@ -230,7 +313,7 @@ public class ImportExportActivity extends AppCompatActivity {
                             noteDao.insertAll(list);
 
                             runOnUiThread(() -> {
-                                toast("Import completato: " + list.size() + " note");
+                                toast("Import completato: " + list.size());
                                 loadNotesWithSettings();
                             });
 
@@ -244,39 +327,9 @@ public class ImportExportActivity extends AppCompatActivity {
                 .show();
     }
 
-    private void hardDelete() {
-
-        Set<Long> sel = adapter.getSelectedNotes();
-
-        if (sel.isEmpty()) {
-            toast("Nessuna selezione");
-            return;
-        }
-
-        new AlertDialog.Builder(this)
-                .setTitle("Delete permanent?")
-                .setMessage("Irreversibile")
-                .setPositiveButton("Delete", (d, w) -> {
-
-                    new Thread(() -> {
-                        for (Note n : notes) {
-                            if (sel.contains(n.id)) {
-                                noteDao.deleteById(n.id);
-                            }
-                        }
-
-                        runOnUiThread(() -> {
-                            sel.clear();
-                            loadNotesWithSettings();
-                            toast("Deleted");
-                        });
-                    }).start();
-
-                })
-                .setNegativeButton("Cancel", null)
-                .show();
-    }
-
+    // =========================
+    // UTIL
+    // =========================
     private void toast(String m) {
         Toast.makeText(this, m, Toast.LENGTH_SHORT).show();
     }
