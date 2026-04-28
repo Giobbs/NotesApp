@@ -111,9 +111,20 @@ public class MainActivity extends AppCompatActivity {
 
             @Override
             public void onDelete(Note note) {
+
                 viewModel.delete(note, null);
                 WidgetUpdater.update(MainActivity.this);
 
+                com.google.android.material.snackbar.Snackbar.make(
+                        findViewById(android.R.id.content),
+                        "Nota eliminata",
+                        com.google.android.material.snackbar.Snackbar.LENGTH_LONG
+                ).setAction("UNDO", v -> {
+
+                    viewModel.insert(note,null);
+                    WidgetUpdater.update(MainActivity.this);
+
+                }).show();
             }
 
             @Override
