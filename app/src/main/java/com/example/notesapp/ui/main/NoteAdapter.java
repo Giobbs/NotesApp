@@ -1,5 +1,6 @@
 package com.example.notesapp.ui.main;
 
+import android.content.Context;
 import android.view.LayoutInflater;
 import android.view.View;
 import android.view.ViewGroup;
@@ -20,7 +21,7 @@ public class NoteAdapter extends RecyclerView.Adapter<RecyclerView.ViewHolder> {
 
     private static final int TYPE_HEADER = 0;
     private static final int TYPE_NOTE = 1;
-
+    private Context context;
     private final Set<String> expandedHeaders = new HashSet<>();
 
     private List<NoteListItem> items = new ArrayList<>();
@@ -30,7 +31,11 @@ public class NoteAdapter extends RecyclerView.Adapter<RecyclerView.ViewHolder> {
     private final Set<Long> selectedNotes = new HashSet<>();
 
     private String aggregation = "none";
-
+    public NoteAdapter(Context context) {
+        this.context = context;
+    }
+    public NoteAdapter() {
+    }
     public String getAggregation() {
         return aggregation;
 
@@ -313,37 +318,61 @@ public class NoteAdapter extends RecyclerView.Adapter<RecyclerView.ViewHolder> {
             content.setText(note.isProtected ? "🔒 Protetta" : note.getContent());
 
             long now = System.currentTimeMillis();
-            long diffMillis = now - note.getUpdatedAt();
-            long diffMinutes = diffMillis / (60 * 1000);
+
+            long created = note.getCreatedAt();
+            String createdText;
+
+            if (created <= 0) {
+                createdText = "—";
+            } else {
+                createdText = new java.text.SimpleDateFormat(
+                        "dd/MM/yyyy",
+                        java.util.Locale.getDefault()
+                ).format(new java.util.Date(created));
+            }
+
+            long updated = note.getUpdatedAt();
+            long diffMillis = now - updated;
+
+            long minutes = diffMillis / (60 * 1000);
+            long hours = diffMillis / (60 * 60 * 1000);
+            long days = diffMillis / (24 * 60 * 60 * 1000);
 
             String modifiedText;
 
-            if (diffMinutes < 1) {
+            if (minutes < 1) {
                 modifiedText = "ora";
+            } else if (minutes < 60) {
+                modifiedText = minutes + " min fa";
+            } else if (hours < 24) {
+                modifiedText = hours + " h fa";
             } else {
-                modifiedText = diffMinutes + " min fa";
+                modifiedText = days + " gg fa";
             }
 
-            updatedAt.setText(
-                    "📅 " + new java.text.SimpleDateFormat(
-                            "dd/MM/yyyy",
-                            java.util.Locale.getDefault()
-                    ).format(new java.util.Date(note.getCreatedAt()))
-                            + " • ✏️ " + modifiedText
-            );
+            updatedAt.setText("📅 " + createdText + " • ✏️ " + modifiedText);
+
             // =========================
             // SELECT
             // =========================
             checkSelect.setVisibility(selectable ? View.VISIBLE : View.GONE);
             checkSelect.setChecked(selectedNotes.contains(note.id));
-
+            checkSelect.setOnCheckedChangeListener(null);
+            checkSelect.setChecked(selectedNotes.contains(note.id));
             btnPin.setVisibility(importExportMode ? View.GONE : View.VISIBLE);
             btnTag.setVisibility(importExportMode ? View.GONE : View.VISIBLE);
             btnShare.setVisibility(importExportMode ? View.GONE : View.VISIBLE);
             btnRestore.setVisibility(importExportMode ? View.VISIBLE : View.GONE);
             btnRestore.setEnabled(importExportMode && note.isDeleted());
             btnRestore.setAlpha(note.isDeleted() ? 1f : 0.4f);
+            checkSelect.setOnCheckedChangeListener((buttonView, isChecked) -> {
 
+                if (isChecked) {
+                    selectedNotes.add(note.id);
+                } else {
+                    selectedNotes.remove(note.id);
+                }
+            });
             // =========================
             // CARD CLICK
             // =========================
@@ -354,22 +383,19 @@ public class NoteAdapter extends RecyclerView.Adapter<RecyclerView.ViewHolder> {
             });
 
             // =========================
-            // RESET PIN STATE (FONDAMENTALE)
+            // RESET PIN STATE
             // =========================
             btnPin.clearColorFilter();
             btnPin.setScaleX(1f);
             btnPin.setScaleY(1f);
             btnPin.setAlpha(0.5f);
-
             card.setStrokeWidth(0);
 
             // =========================
             // APPLY PIN STATE
             // =========================
             if (pinned) {
-
                 btnPin.setColorFilter(android.graphics.Color.parseColor("#FFC107"));
-
                 btnPin.setScaleX(1.1f);
                 btnPin.setScaleY(1.1f);
                 btnPin.setAlpha(1f);
@@ -378,9 +404,6 @@ public class NoteAdapter extends RecyclerView.Adapter<RecyclerView.ViewHolder> {
                 card.setStrokeColor(android.graphics.Color.parseColor("#FF9800"));
             }
 
-            // =========================
-            // ICON SEMPRE COERENTE
-            // =========================
             btnPin.setImageResource(
                     pinned
                             ? android.R.drawable.btn_star_big_on
@@ -388,28 +411,21 @@ public class NoteAdapter extends RecyclerView.Adapter<RecyclerView.ViewHolder> {
             );
 
             // =========================
-            // SHARE
+            // ACTIONS
             // =========================
             btnShare.setOnClickListener(v -> {
                 if (listener != null) listener.onShare(note);
             });
 
-            // =========================
-            // DELETE
-            // =========================
             btnDelete.setOnClickListener(v -> {
                 if (listener != null) listener.onDelete(note);
             });
-            // =========================
-            // PIN
-            // =========================
-            btnPin.setOnClickListener(v -> {
+
+             btnPin.setOnClickListener(v -> {
 
                 if (listener == null) return;
 
-                v.performHapticFeedback(
-                        android.view.HapticFeedbackConstants.VIRTUAL_KEY
-                );
+                v.performHapticFeedback(android.view.HapticFeedbackConstants.VIRTUAL_KEY);
 
                 v.animate()
                         .scaleX(0.85f)
@@ -427,13 +443,7 @@ public class NoteAdapter extends RecyclerView.Adapter<RecyclerView.ViewHolder> {
 
                 Note currentNote = items.get(pos).note;
 
-                if (listener != null) {
-                    listener.onPin(note);
-                }
-
-                if (listener != null) {
-                    listener.onPin(currentNote);
-                }
+                listener.onPin(currentNote);
             });
 
             // =========================
@@ -462,7 +472,6 @@ public class NoteAdapter extends RecyclerView.Adapter<RecyclerView.ViewHolder> {
                 });
 
                 builder.setNegativeButton("Annulla", null);
-
                 builder.show();
             });
 
@@ -474,6 +483,5 @@ public class NoteAdapter extends RecyclerView.Adapter<RecyclerView.ViewHolder> {
             // PROTECTION
             // =========================
             card.setAlpha(note.isProtected ? 0.7f : 1f);
-        }
-    }
+        }    }
 }

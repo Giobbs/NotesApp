@@ -37,7 +37,7 @@ public class ImportExportActivity extends AppCompatActivity {
     private Button btnImport;
     private Button btnSelectAll;
     private TextView txtResult;
-
+    private Button btnDeleteSelected;
     private RecyclerView recyclerNotes;
 
     private NoteDao noteDao;
@@ -64,9 +64,9 @@ public class ImportExportActivity extends AppCompatActivity {
         btnExport = findViewById(R.id.btnExport);
         btnImport = findViewById(R.id.btnImport);
         btnSelectAll = findViewById(R.id.btnSelectAll);
-        txtResult = findViewById(R.id.txtResult);
+//        txtResult = findViewById(R.id.txtResult);
         recyclerNotes = findViewById(R.id.recyclerNotes);
-
+        btnDeleteSelected = findViewById(R.id.btnDeleteSelected);
         noteDao = AppDatabase.getInstance(this).noteDao();
 
         adapter = new NoteAdapter();
@@ -81,13 +81,24 @@ public class ImportExportActivity extends AppCompatActivity {
             public void onDelete(Note note) {
                 if (note == null) return;
 
-                new Thread(() -> {
-                    noteDao.deleteById(note.id);
-                    runOnUiThread(() -> {
-                        toast("Nota eliminata definitivamente");
-                        loadNotesWithSettings();
-                    });
-                }).start();
+                new android.app.AlertDialog.Builder(ImportExportActivity.this)
+                        .setTitle("Eliminazione definitiva")
+                        .setMessage("Sei sicuro di voler eliminare definitivamente questa nota?")
+                        .setPositiveButton("Elimina", (dialog, which) -> {
+
+                            new Thread(() -> {
+                                noteDao.deleteById(note.id);
+
+                                runOnUiThread(() -> {
+                                    toast("Nota eliminata definitivamente");
+                                    loadNotesWithSettings();
+                                });
+
+                            }).start();
+
+                        })
+                        .setNegativeButton("Annulla", null)
+                        .show();
             }
 
             @Override
@@ -121,6 +132,7 @@ public class ImportExportActivity extends AppCompatActivity {
         btnSelectAll.setOnClickListener(v -> toggleSelectAll());
         btnExport.setOnClickListener(v -> exportSelected());
         btnImport.setOnClickListener(v -> importJson());
+        btnDeleteSelected.setOnClickListener(v -> deleteSelected());
     }
 
     // =========================
@@ -184,7 +196,7 @@ public class ImportExportActivity extends AppCompatActivity {
                 obj.put("content", n.content);
                 obj.put("updatedAt", n.updatedAt);
                 obj.put("tags", n.getTags());
-
+                obj.put("createdAt", n.createdAt);
                 array.put(obj);
             }
 
@@ -298,12 +310,14 @@ public class ImportExportActivity extends AppCompatActivity {
                         for (int i = 0; i < arr.length(); i++) {
 
                             JSONObject o = arr.getJSONObject(i);
+                            long now = System.currentTimeMillis();
 
                             Note n = new Note();
                             n.uuid = o.optString("uuid");
                             n.title = o.optString("title");
                             n.content = o.optString("content");
-                            n.updatedAt = System.currentTimeMillis();
+                            n.createdAt = o.optLong("createdAt", now);
+                            n.updatedAt = now;
                             n.setTags(o.optString("tags"));
 
                             list.add(n);
@@ -326,7 +340,40 @@ public class ImportExportActivity extends AppCompatActivity {
                 .setNegativeButton("Annulla", null)
                 .show();
     }
+    private void deleteSelected() {
 
+        Set<Long> selected = adapter.getSelectedNotes();
+
+        if (selected == null || selected.isEmpty()) {
+            toast("Nessuna nota selezionata");
+            return;
+        }
+
+        new AlertDialog.Builder(this)
+                .setTitle("Eliminazione multipla")
+                .setMessage("Vuoi eliminare " + selected.size() + " note?")
+                .setPositiveButton("Elimina", (dialog, which) -> {
+
+                    new Thread(() -> {
+
+                        for (Long id : selected) {
+                            noteDao.deleteById(id);
+                        }
+
+                        runOnUiThread(() -> {
+                            toast("Note eliminate: " + selected.size());
+                            selected.clear();
+                            adapter.getSelectedNotes().clear();
+                            adapter.notifyDataSetChanged();
+                            loadNotesWithSettings();
+                        });
+
+                    }).start();
+
+                })
+                .setNegativeButton("Annulla", null)
+                .show();
+    }
     // =========================
     // UTIL
     // =========================

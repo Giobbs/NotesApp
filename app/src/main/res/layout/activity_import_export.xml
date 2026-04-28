@@ -19,26 +19,28 @@
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
         android:orientation="horizontal"
-        android:weightSum="2">
-
-        <Button
-            android:id="@+id/btnSelectAll"
-            android:layout_width="0dp"
-            android:layout_height="wrap_content"
-            android:layout_weight="1"
-            android:text="Select All"/>
+        android:weightSum="3">
 
         <Button
             android:id="@+id/btnExport"
             android:layout_width="0dp"
             android:layout_height="wrap_content"
             android:layout_weight="1"
-            android:text="Export"/>
+            android:text="Export JSON"/>
+
         <Button
             android:id="@+id/btnImport"
-            android:layout_width="wrap_content"
+            android:layout_width="0dp"
             android:layout_height="wrap_content"
+            android:layout_weight="1"
             android:text="Import JSON"/>
+
+        <Button
+            android:id="@+id/btnDeleteSelected"
+            android:layout_width="0dp"
+            android:layout_height="wrap_content"
+            android:layout_weight="1"
+            android:text="Delete Selected"/>
     </LinearLayout>
 
     <!-- LISTA NOTE -->
@@ -51,19 +53,30 @@
         android:paddingTop="8dp"
         android:paddingBottom="8dp"/>
 
-    <!-- OUTPUT JSON -->
+    <!-- SELECT ALL   -->
+    <Button
+        android:id="@+id/btnSelectAll"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:text="Select All"
+        android:layout_marginTop="8dp"/>
+
+    <!-- OUTPUT JSON
     <ScrollView
         android:layout_width="match_parent"
         android:layout_height="120dp"
         android:background="#F5F5F5"
-        android:padding="8dp">
+        android:padding="8dp">-->
 
+         <!--
         <TextView
             android:id="@+id/txtResult"
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
             android:text="JSON output..."
             android:textSize="12sp"/>
-    </ScrollView>
+        -->
+
+<!--    </ScrollView>-->
 
 </LinearLayout>
