@@ -50,7 +50,77 @@
                 android:text="Scuro"/>
 
         </RadioGroup>
+        <!-- =========================
+             AGGREGAZIONE
+        ========================= -->
+        <TextView
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:text="Aggregazione"
+            android:textStyle="bold"
+            android:textSize="16sp"
+            android:paddingTop="16dp"
+            android:paddingBottom="8dp"/>
 
+        <RadioGroup
+            android:id="@+id/radioAggregation"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content">
+
+            <RadioButton
+                android:id="@+id/aggNone"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:text="Nessuna"/>
+
+            <RadioButton
+                android:id="@+id/aggTag"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:text="Per Tag"/>
+
+            <RadioButton
+                android:id="@+id/aggDate"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:text="Per Data"/>
+        </RadioGroup>
+
+        <!-- =========================
+             FILTRO DATA
+        ========================= -->
+        <TextView
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:text="Periodo"
+            android:textStyle="bold"
+            android:textSize="16sp"
+            android:paddingTop="16dp"
+            android:paddingBottom="8dp"/>
+
+        <RadioGroup
+            android:id="@+id/radioDateRange"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content">
+
+            <RadioButton
+                android:id="@+id/date7"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:text="Ultimi 7 giorni"/>
+
+            <RadioButton
+                android:id="@+id/date30"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:text="Ultimo mese"/>
+
+            <RadioButton
+                android:id="@+id/date365"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:text="Ultimo anno"/>
+        </RadioGroup>
     </LinearLayout>
 
 </androidx.coordinatorlayout.widget.CoordinatorLayout>

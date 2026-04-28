@@ -23,6 +23,9 @@ import com.example.notesapp.ui.main.NotesViewModel;
 import com.example.notesapp.ui.widget.WidgetUpdater;
 import com.google.android.material.floatingactionbutton.FloatingActionButton;
 
+import java.util.ArrayList;
+import java.util.List;
+
 public class MainActivity extends AppCompatActivity {
 
     private NotesViewModel viewModel;
@@ -49,18 +52,61 @@ public class MainActivity extends AppCompatActivity {
     @Override
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
-        SharedPreferences prefs = getSharedPreferences("app_settings", MODE_PRIVATE);
+
+        // 🔹 Load settings
+        SharedPreferences prefs = getSharedPreferences(SettingsActivity.PREFS_NAME, MODE_PRIVATE);
+
+        // 🔹 Apply tema PRIMA della view
         SettingsActivity.applyTheme(prefs);
+
         setContentView(R.layout.activity_main);
 
+        // 🔹 Init UI
         initViews();
         setupRecycler();
         setupViewModel();
         setupAdapter();
         setupActions();
 
+        // 🔹 Leggi preferenze (ti serviranno per filtrare/raggruppare)
+        String aggregation = prefs.getString(SettingsActivity.KEY_AGGREGATION, "none");
+        String dateRange = prefs.getString(SettingsActivity.KEY_DATE_RANGE, "7");
+
+        applyFilters(aggregation, dateRange);
     }
 
+    private void applyFilters(String aggregation, String range) {
+
+        adapter.setAggregation(aggregation);
+
+        long now = System.currentTimeMillis();
+        long limit;
+
+        switch (range) {
+            case "30":
+                limit = now - (30L * 24 * 60 * 60 * 1000);
+                break;
+            case "365":
+                limit = now - (365L * 24 * 60 * 60 * 1000);
+                break;
+            default:
+                limit = now - (7L * 24 * 60 * 60 * 1000);
+                break;
+        }
+
+        viewModel.getNotes().observe(this, notes -> {
+
+            List<Note> filtered = new ArrayList<>();
+
+            for (Note n : notes) {
+                if (n.getUpdatedAt() >= limit) {
+                    filtered.add(n);
+                }
+            }
+
+            adapter.setNotes(filtered); // aggregation già dentro adapter
+        });
+    }
     private void initViews() {
         searchView = findViewById(R.id.searchView);
         btnSort = findViewById(R.id.btnSort);
@@ -81,8 +127,6 @@ public class MainActivity extends AppCompatActivity {
 
     private void setupViewModel() {
         viewModel = new ViewModelProvider(this).get(NotesViewModel.class);
-        viewModel.getNotes().observe(this, adapter::setNotes);
-
          viewModel.setShowPinnedOnly(false);
         btnPinned.setText("Pinned OFF");
     }

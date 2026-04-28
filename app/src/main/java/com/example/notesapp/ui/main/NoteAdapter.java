@@ -18,17 +18,28 @@ import com.example.notesapp.R;
 import com.example.notesapp.data.local.Note;
 import com.google.android.material.card.MaterialCardView;
 
-import java.util.ArrayList;
-import java.util.HashSet;
-import java.util.List;
-import java.util.Set;
+import java.util.*;
 
-public class NoteAdapter extends RecyclerView.Adapter<NoteAdapter.NoteViewHolder> {
+public class NoteAdapter extends RecyclerView.Adapter<RecyclerView.ViewHolder> {
 
-    private List<Note> notes = new ArrayList<>();
+    // =========================
+    // TYPES
+    // =========================
+    private static final int TYPE_HEADER = 0;
+    private static final int TYPE_NOTE = 1;
+
+    private List<NoteListItem> items = new ArrayList<>();
     private OnNoteActionListener listener;
 
     private final Set<Long> selectedNotes = new HashSet<>();
+    private String aggregation = "none";
+
+    public void setNotes(List<Note> notes) {
+        setNotes(notes, aggregation);
+    }
+    public void setAggregation(String aggregation) {
+        this.aggregation = aggregation;
+    }
 
     public enum Mode {
         NORMAL,
@@ -46,6 +57,32 @@ public class NoteAdapter extends RecyclerView.Adapter<NoteAdapter.NoteViewHolder
         return selectedNotes;
     }
 
+    // =========================
+    // MODEL WRAPPER
+    // =========================
+    private static class NoteListItem {
+        int type;
+        String header;
+        Note note;
+
+        static NoteListItem header(String text) {
+            NoteListItem item = new NoteListItem();
+            item.type = TYPE_HEADER;
+            item.header = text;
+            return item;
+        }
+
+        static NoteListItem note(Note note) {
+            NoteListItem item = new NoteListItem();
+            item.type = TYPE_NOTE;
+            item.note = note;
+            return item;
+        }
+    }
+
+    // =========================
+    // LISTENER
+    // =========================
     public interface OnNoteActionListener {
         void onNoteClick(Note note);
         void onDelete(Note note);
@@ -58,31 +95,140 @@ public class NoteAdapter extends RecyclerView.Adapter<NoteAdapter.NoteViewHolder
         this.listener = listener;
     }
 
-    public void setNotes(List<Note> newNotes) {
-        this.notes = (newNotes != null) ? newNotes : new ArrayList<>();
+    // =========================
+    // SET DATA (CORE LOGIC)
+    // =========================
+    public void setNotes(List<Note> newNotes, String aggregation) {
+
+        items.clear();
+
+        if (newNotes == null) {
+            notifyDataSetChanged();
+            return;
+        }
+
+        if ("tag".equals(aggregation)) {
+
+            Map<String, List<Note>> map = new HashMap<>();
+
+            for (Note n : newNotes) {
+                String tag = (n.getTags() == null || n.getTags().isEmpty())
+                        ? "Senza tag"
+                        : n.getTags().split(",")[0].trim();
+
+                map.computeIfAbsent(tag, k -> new ArrayList<>()).add(n);
+            }
+
+            for (String tag : map.keySet()) {
+                items.add(NoteListItem.header("🏷 " + tag));
+                for (Note n : map.get(tag)) {
+                    items.add(NoteListItem.note(n));
+                }
+            }
+
+        } else if ("date".equals(aggregation)) {
+
+            long now = System.currentTimeMillis();
+
+            List<Note> today = new ArrayList<>();
+            List<Note> week = new ArrayList<>();
+            List<Note> older = new ArrayList<>();
+
+            for (Note n : newNotes) {
+                long diff = now - n.getUpdatedAt();
+
+                if (diff < 24L * 60 * 60 * 1000) {
+                    today.add(n);
+                } else if (diff < 7L * 24 * 60 * 60 * 1000) {
+                    week.add(n);
+                } else {
+                    older.add(n);
+                }
+            }
+
+            if (!today.isEmpty()) {
+                items.add(NoteListItem.header("📅 Oggi"));
+                today.forEach(n -> items.add(NoteListItem.note(n)));
+            }
+
+            if (!week.isEmpty()) {
+                items.add(NoteListItem.header("📅 Ultimi 7 giorni"));
+                week.forEach(n -> items.add(NoteListItem.note(n)));
+            }
+
+            if (!older.isEmpty()) {
+                items.add(NoteListItem.header("📅 Più vecchie"));
+                older.forEach(n -> items.add(NoteListItem.note(n)));
+            }
+
+        } else {
+            for (Note n : newNotes) {
+                items.add(NoteListItem.note(n));
+            }
+        }
+
         notifyDataSetChanged();
+    }
+
+    // =========================
+    // ADAPTER CORE
+    // =========================
+    @Override
+    public int getItemViewType(int position) {
+        return items.get(position).type;
+    }
+
+    @Override
+    public int getItemCount() {
+        return items.size();
     }
 
     @NonNull
     @Override
-    public NoteViewHolder onCreateViewHolder(@NonNull ViewGroup parent, int viewType) {
+    public RecyclerView.ViewHolder onCreateViewHolder(@NonNull ViewGroup parent, int viewType) {
+
+        if (viewType == TYPE_HEADER) {
+            View v = LayoutInflater.from(parent.getContext())
+                    .inflate(R.layout.item_header, parent, false);
+            return new HeaderViewHolder(v);
+        }
+
         View v = LayoutInflater.from(parent.getContext())
                 .inflate(R.layout.item_note, parent, false);
         return new NoteViewHolder(v);
     }
 
     @Override
-    public void onBindViewHolder(@NonNull NoteViewHolder holder, int position) {
-        holder.bind(notes.get(position), listener, mode, selectedNotes);
-    }
+    public void onBindViewHolder(@NonNull RecyclerView.ViewHolder holder, int position) {
 
-    @Override
-    public int getItemCount() {
-        return notes.size();
+        NoteListItem item = items.get(position);
+
+        if (item.type == TYPE_HEADER) {
+            ((HeaderViewHolder) holder).bind(item.header);
+        } else {
+            ((NoteViewHolder) holder).bind(item.note, listener, mode, selectedNotes);
+        }
     }
 
     // =========================
-    // VIEW HOLDER
+    // HEADER VIEW HOLDER
+    // =========================
+    static class HeaderViewHolder extends RecyclerView.ViewHolder {
+
+        TextView title;
+
+        public HeaderViewHolder(@NonNull View itemView) {
+            super(itemView);
+            title = itemView.findViewById(R.id.headerTitle);
+        }
+
+        void bind(String text) {
+            title.setText(text);
+        }
+    }
+
+    // =========================
+    // NOTE VIEW HOLDER
     // =========================
     static class NoteViewHolder extends RecyclerView.ViewHolder {
 
@@ -108,33 +254,33 @@ public class NoteAdapter extends RecyclerView.Adapter<NoteAdapter.NoteViewHolder
             checkSelect = itemView.findViewById(R.id.checkSelect);
         }
 
-        void bind(
-                Note note,
-                OnNoteActionListener listener,
-                Mode mode,
-                Set<Long> selectedNotes
-        ) {
+        void bind(Note note, OnNoteActionListener listener, Mode mode, Set<Long> selectedNotes) {
 
             if (note == null) return;
 
             boolean selectable = (mode == Mode.SELECTABLE);
 
-            // =========================
-            // BASIC DATA
-            // =========================
             title.setText(note.getTitle());
 
             content.setText(
                     note.isProtected ? "🔒 Contenuto protetto" : note.getContent()
             );
 
-            updatedAt.setText(
-                    DateUtils.getRelativeTimeSpanString(
-                            note.getUpdatedAt(),
-                            System.currentTimeMillis(),
-                            DateUtils.MINUTE_IN_MILLIS
-                    )
+            // =========================
+            // DATE
+            // =========================
+            java.text.SimpleDateFormat fullDateFormat =
+                    new java.text.SimpleDateFormat("dd/MM/yyyy", java.util.Locale.getDefault());
+
+            String created = fullDateFormat.format(new java.util.Date(note.getCreatedAt()));
+
+            CharSequence updated = android.text.format.DateUtils.getRelativeTimeSpanString(
+                    note.getUpdatedAt(),
+                    System.currentTimeMillis(),
+                    android.text.format.DateUtils.MINUTE_IN_MILLIS
             );
+
+            updatedAt.setText("📅 " + created + " • ✏ " + updated);
 
             // =========================
             // TAGS
@@ -155,9 +301,6 @@ public class NoteAdapter extends RecyclerView.Adapter<NoteAdapter.NoteViewHolder
                 }
             });
 
-            // =========================
-            // ACTION VISIBILITY (IMPORTANT)
-            // =========================
             int actionVisibility = selectable ? View.GONE : View.VISIBLE;
 
             delete.setVisibility(actionVisibility);
@@ -165,9 +308,6 @@ public class NoteAdapter extends RecyclerView.Adapter<NoteAdapter.NoteViewHolder
             share.setVisibility(actionVisibility);
             addTag.setVisibility(actionVisibility);
 
-            // =========================
-            // ACTIONS (only NORMAL)
-            // =========================
             if (!selectable) {
 
                 delete.setOnClickListener(v -> {
@@ -192,32 +332,23 @@ public class NoteAdapter extends RecyclerView.Adapter<NoteAdapter.NoteViewHolder
                     builder.setTitle("Aggiungi tag");
 
                     EditText input = new EditText(itemView.getContext());
-                    input.setHint("es: android, work");
-
                     builder.setView(input);
 
                     builder.setPositiveButton("OK", (dialog, which) -> {
-
                         String tag = input.getText().toString().trim();
-
                         if (!tag.isEmpty()) {
                             listener.onAddTag(note, tag);
                         }
                     });
 
                     builder.setNegativeButton("Annulla", null);
-
                     builder.show();
                 });
             }
 
-            // =========================
-            // SELECT MODE
-            // =========================
             checkSelect.setVisibility(selectable ? View.VISIBLE : View.GONE);
 
             if (selectable) {
-
                 checkSelect.setOnCheckedChangeListener(null);
                 checkSelect.setChecked(selectedNotes.contains(note.id));
 
@@ -227,15 +358,10 @@ public class NoteAdapter extends RecyclerView.Adapter<NoteAdapter.NoteViewHolder
                 });
 
             } else {
-                checkSelect.setOnCheckedChangeListener(null);
                 checkSelect.setChecked(false);
             }
 
-            // =========================
-            // PIN UI (ONLY NORMAL MODE)
-            // =========================
             if (!selectable) {
-
                 boolean pinned = note.isPinned();
 
                 pin.setImageResource(
@@ -253,9 +379,6 @@ public class NoteAdapter extends RecyclerView.Adapter<NoteAdapter.NoteViewHolder
                 card.setStrokeWidth(0);
             }
 
-            // =========================
-            // VISUAL PROTECTION STATE
-            // =========================
             card.setAlpha(note.isProtected ? 0.7f : 1f);
         }
     }

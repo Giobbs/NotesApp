@@ -1,5 +1,6 @@
 package com.example.notesapp;
 
+import android.content.SharedPreferences;
 import android.os.Bundle;
 import android.widget.Button;
 import android.widget.TextView;
@@ -18,12 +19,14 @@ import com.example.notesapp.ui.main.NoteAdapter;
 import org.json.JSONArray;
 import org.json.JSONObject;
 
+import java.util.ArrayList;
 import java.util.List;
 import java.util.Set;
 
 public class ImportExportActivity extends AppCompatActivity {
 
     private Button btnExport;
+    private Button btnImport;
     private Button btnSelectAll;
     private TextView txtResult;
 
@@ -37,12 +40,17 @@ public class ImportExportActivity extends AppCompatActivity {
     @Override
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
+
+        SharedPreferences prefs = getSharedPreferences(SettingsActivity.PREFS_NAME, MODE_PRIVATE);
+        SettingsActivity.applyTheme(prefs);
+
         setContentView(R.layout.activity_import_export);
 
         // =========================
         // VIEW
         // =========================
         btnExport = findViewById(R.id.btnExport);
+        btnImport = findViewById(R.id.btnImport); // AGGIUNGILO XML
         btnSelectAll = findViewById(R.id.btnSelectAll);
         txtResult = findViewById(R.id.txtResult);
         recyclerNotes = findViewById(R.id.recyclerNotes);
@@ -50,7 +58,7 @@ public class ImportExportActivity extends AppCompatActivity {
         noteDao = AppDatabase.getInstance(this).noteDao();
 
         // =========================
-        // ADAPTER SETUP
+        // ADAPTER
         // =========================
         adapter = new NoteAdapter();
         adapter.setMode(NoteAdapter.Mode.SELECTABLE);
@@ -59,13 +67,9 @@ public class ImportExportActivity extends AppCompatActivity {
         recyclerNotes.setAdapter(adapter);
 
         // =========================
-        // LOAD NOTES
+        // LOAD + AGGREGAZIONE
         // =========================
-        new Thread(() -> {
-            notes = noteDao.getAllNotesSync();
-
-            runOnUiThread(() -> adapter.setNotes(notes));
-        }).start();
+        loadNotesWithSettings();
 
         // =========================
         // SELECT ALL
@@ -88,48 +92,118 @@ public class ImportExportActivity extends AppCompatActivity {
         });
 
         // =========================
-        // EXPORT SELECTED
+        // EXPORT
         // =========================
-        btnExport.setOnClickListener(v -> {
+        btnExport.setOnClickListener(v -> exportSelected());
 
-            try {
-                Set<Long> selected = adapter.getSelectedNotes();
+        // =========================
+        // IMPORT
+        // =========================
+        btnImport.setOnClickListener(v -> importJson());
+    }
 
-                JSONArray array = new JSONArray();
+    // =========================
+    // LOAD NOTES + SETTINGS
+    // =========================
+    private void loadNotesWithSettings() {
 
-                for (Note n : notes) {
+        new Thread(() -> {
 
-                    if (!selected.contains(n.id)) continue;
+            notes = noteDao.getAllNotesSync();
 
-                    NoteExportDto dto = new NoteExportDto();
-                    dto.id = n.id;
-                    dto.uuid = n.uuid;
-                    dto.title = n.title;
-                    dto.content = n.content;
-                    dto.updatedAt = n.updatedAt;
-                    dto.tags = n.getTags();
+            SharedPreferences prefs = getSharedPreferences(SettingsActivity.PREFS_NAME, MODE_PRIVATE);
+            String aggregation = prefs.getString(SettingsActivity.KEY_AGGREGATION, "none");
 
-                    JSONObject obj = new JSONObject();
-                    obj.put("id", dto.id);
-                    obj.put("uuid", dto.uuid);
-                    obj.put("title", dto.title);
-                    obj.put("content", dto.content);
-                    obj.put("updatedAt", dto.updatedAt);
-                    obj.put("tags", dto.tags);
+            runOnUiThread(() -> adapter.setNotes(notes, aggregation));
 
-                    array.put(obj);
-                }
-                String json = array.toString(2);
+        }).start();
+    }
 
-                txtResult.setText(json);
+    // =========================
+    // EXPORT
+    // =========================
+    private void exportSelected() {
 
-                Toast.makeText(this,
-                        "Export: " + array.length() + " note",
-                        Toast.LENGTH_SHORT).show();
+        try {
+            Set<Long> selected = adapter.getSelectedNotes();
 
-            } catch (Exception e) {
-                txtResult.setText("Errore export: " + e.getMessage());
+            JSONArray array = new JSONArray();
+
+            for (Note n : notes) {
+
+                if (!selected.contains(n.id)) continue;
+
+                JSONObject obj = new JSONObject();
+                obj.put("id", n.id);
+                obj.put("uuid", n.uuid);
+                obj.put("title", n.title);
+                obj.put("content", n.content);
+                obj.put("updatedAt", n.updatedAt);
+                obj.put("tags", n.getTags());
+
+                array.put(obj);
             }
-        });
+
+            String json = array.toString(2);
+            txtResult.setText(json);
+
+            Toast.makeText(this,
+                    "Export: " + array.length() + " note",
+                    Toast.LENGTH_SHORT).show();
+
+        } catch (Exception e) {
+            txtResult.setText("Errore export: " + e.getMessage());
+        }
+    }
+
+    // =========================
+    // IMPORT
+    // =========================
+    private void importJson() {
+
+        try {
+            String input = txtResult.getText().toString();
+
+            if (input.isEmpty()) {
+                Toast.makeText(this, "Incolla prima un JSON", Toast.LENGTH_SHORT).show();
+                return;
+            }
+
+            JSONArray array = new JSONArray(input);
+
+            List<Note> toInsert = new ArrayList<>();
+
+            for (int i = 0; i < array.length(); i++) {
+
+                JSONObject obj = array.getJSONObject(i);
+
+                Note n = new Note();
+
+                n.uuid = obj.optString("uuid");
+                n.title = obj.optString("title");
+                n.content = obj.optString("content");
+                n.updatedAt = obj.optLong("updatedAt", System.currentTimeMillis());
+                n.setTags(obj.optString("tags"));
+
+                toInsert.add(n);
+            }
+
+            new Thread(() -> {
+                noteDao.insertAll(toInsert);
+
+                runOnUiThread(() -> {
+                    Toast.makeText(this,
+                            "Importate: " + toInsert.size() + " note",
+                            Toast.LENGTH_SHORT).show();
+
+                    txtResult.setText("");
+                    loadNotesWithSettings();
+                });
+
+            }).start();
+
+        } catch (Exception e) {
+            txtResult.setText("Errore import: " + e.getMessage());
+        }
     }
 }

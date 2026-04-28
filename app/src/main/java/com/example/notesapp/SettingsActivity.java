@@ -13,7 +13,8 @@ public class SettingsActivity extends AppCompatActivity {
 
     public static final String PREFS_NAME = "app_settings";
     public static final String KEY_THEME = "theme";
-
+    public static final String KEY_AGGREGATION = "aggregation";
+    public static final String KEY_DATE_RANGE = "date_range";
     @Override
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
@@ -21,46 +22,122 @@ public class SettingsActivity extends AppCompatActivity {
 
         SharedPreferences prefs = getSharedPreferences(PREFS_NAME, MODE_PRIVATE);
 
-        RadioGroup radioGroup = findViewById(R.id.radioTheme);
+        // =========================
+        // THEME
+        // =========================
+        RadioGroup themeGroup = findViewById(R.id.radioTheme);
         RadioButton system = findViewById(R.id.themeSystem);
         RadioButton light = findViewById(R.id.themeLight);
         RadioButton dark = findViewById(R.id.themeDark);
 
-        // stato iniziale
-        String current = prefs.getString(KEY_THEME, "system");
-        switch (current) {
-            case "light": light.setChecked(true); break;
-            case "dark": dark.setChecked(true); break;
-            default: system.setChecked(true); break;
+        String currentTheme = prefs.getString(KEY_THEME, "system");
+
+        switch (currentTheme) {
+            case "light":
+                light.setChecked(true);
+                break;
+            case "dark":
+                dark.setChecked(true);
+                break;
+            default:
+                system.setChecked(true);
+                break;
         }
 
-        radioGroup.setOnCheckedChangeListener((group, checkedId) -> {
+        themeGroup.setOnCheckedChangeListener((group, checkedId) -> {
+
             String value = "system";
 
             if (checkedId == R.id.themeLight) value = "light";
             else if (checkedId == R.id.themeDark) value = "dark";
 
-            prefs.edit().putString(KEY_THEME, value).apply();
+            prefs.edit()
+                    .putString(KEY_THEME, value)
+                    .apply();
 
             applyTheme(prefs);
-
-             recreate();
+            recreate();
         });
-    }
 
-    public static void applyTheme(SharedPreferences prefs) {
-        String theme = prefs.getString(KEY_THEME, "system");
+        // =========================
+        // AGGREGATION
+        // =========================
+        RadioGroup aggGroup = findViewById(R.id.radioAggregation);
 
-        switch (theme) {
-            case "light":
-                AppCompatDelegate.setDefaultNightMode(AppCompatDelegate.MODE_NIGHT_NO);
+        RadioButton aggNone = findViewById(R.id.aggNone);
+        RadioButton aggTag = findViewById(R.id.aggTag);
+        RadioButton aggDate = findViewById(R.id.aggDate);
+
+        String agg = prefs.getString(KEY_AGGREGATION, "none");
+
+        switch (agg) {
+            case "tag":
+                aggTag.setChecked(true);
                 break;
-            case "dark":
-                AppCompatDelegate.setDefaultNightMode(AppCompatDelegate.MODE_NIGHT_YES);
+            case "date":
+                aggDate.setChecked(true);
                 break;
             default:
-                AppCompatDelegate.setDefaultNightMode(AppCompatDelegate.MODE_NIGHT_FOLLOW_SYSTEM);
+                aggNone.setChecked(true);
                 break;
         }
+
+        aggGroup.setOnCheckedChangeListener((group, checkedId) -> {
+
+            String value = "none";
+
+            if (checkedId == R.id.aggTag) value = "tag";
+            else if (checkedId == R.id.aggDate) value = "date";
+
+            prefs.edit()
+                    .putString(KEY_AGGREGATION, value)
+                    .apply();
+        });
+
+        // =========================
+        // DATE RANGE
+        // =========================
+        RadioGroup dateGroup = findViewById(R.id.radioDateRange);
+
+        RadioButton d7 = findViewById(R.id.date7);
+        RadioButton d30 = findViewById(R.id.date30);
+        RadioButton d365 = findViewById(R.id.date365);
+
+        String range = prefs.getString(KEY_DATE_RANGE, "7");
+
+        switch (range) {
+            case "30":
+                d30.setChecked(true);
+                break;
+            case "365":
+                d365.setChecked(true);
+                break;
+            default:
+                d7.setChecked(true);
+                break;
+        }
+
+        dateGroup.setOnCheckedChangeListener((group, checkedId) -> {
+
+            String value = "7";
+
+            if (checkedId == R.id.date30) value = "30";
+            else if (checkedId == R.id.date365) value = "365";
+
+            prefs.edit()
+                    .putString(KEY_DATE_RANGE, value)
+                    .apply();
+        });
     }
-}
+    public static void applyTheme(SharedPreferences prefs) {
+
+        String theme = prefs.getString(KEY_THEME, "system");
+
+        if ("light".equals(theme)) {
+            AppCompatDelegate.setDefaultNightMode(AppCompatDelegate.MODE_NIGHT_NO);
+        } else if ("dark".equals(theme)) {
+            AppCompatDelegate.setDefaultNightMode(AppCompatDelegate.MODE_NIGHT_YES);
+        } else {
+            AppCompatDelegate.setDefaultNightMode(AppCompatDelegate.MODE_NIGHT_FOLLOW_SYSTEM);
+        }
+    }}

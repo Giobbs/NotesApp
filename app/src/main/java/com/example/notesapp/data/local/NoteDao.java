@@ -55,6 +55,9 @@ public interface NoteDao {
     @Update
     int update(Note note);
 
+    @Insert(onConflict = OnConflictStrategy.REPLACE)
+    void insertAll(List<Note> notes);
+
     // =========================
     // 🗑 SOFT DELETE
     // =========================
