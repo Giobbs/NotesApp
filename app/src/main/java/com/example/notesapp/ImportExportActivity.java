@@ -3,9 +3,11 @@ package com.example.notesapp;
 import android.content.SharedPreferences;
 import android.os.Bundle;
 import android.widget.Button;
+import android.widget.EditText;
 import android.widget.TextView;
 import android.widget.Toast;
 
+import androidx.appcompat.app.AlertDialog;
 import androidx.appcompat.app.AppCompatActivity;
 import androidx.recyclerview.widget.LinearLayoutManager;
 import androidx.recyclerview.widget.RecyclerView;
@@ -13,7 +15,6 @@ import androidx.recyclerview.widget.RecyclerView;
 import com.example.notesapp.data.local.AppDatabase;
 import com.example.notesapp.data.local.Note;
 import com.example.notesapp.data.local.NoteDao;
-import com.example.notesapp.dto.NoteExportDto;
 import com.example.notesapp.ui.main.NoteAdapter;
 
 import org.json.JSONArray;
@@ -35,7 +36,7 @@ public class ImportExportActivity extends AppCompatActivity {
     private NoteDao noteDao;
     private NoteAdapter adapter;
 
-    private List<Note> notes;
+    private List<Note> notes = new ArrayList<>();
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
@@ -46,38 +47,76 @@ public class ImportExportActivity extends AppCompatActivity {
 
         setContentView(R.layout.activity_import_export);
 
-        // =========================
-        // VIEW
-        // =========================
         btnExport = findViewById(R.id.btnExport);
-        btnImport = findViewById(R.id.btnImport); // AGGIUNGILO XML
+        btnImport = findViewById(R.id.btnImport);
         btnSelectAll = findViewById(R.id.btnSelectAll);
         txtResult = findViewById(R.id.txtResult);
         recyclerNotes = findViewById(R.id.recyclerNotes);
 
         noteDao = AppDatabase.getInstance(this).noteDao();
 
-        // =========================
-        // ADAPTER
-        // =========================
         adapter = new NoteAdapter();
-        adapter.setMode(NoteAdapter.Mode.SELECTABLE);
+
+        adapter.setMode(NoteAdapter.Mode.IMPORT_EXPORT);
+        adapter.setListener(new NoteAdapter.OnNoteActionListener() {
+            @Override
+            public void onNoteClick(Note note) {
+            }
+
+            @Override
+            public void onDelete(Note note) {
+                if (note == null) return;
+
+                new Thread(() -> {
+                    noteDao.deleteById(note.id);
+                    runOnUiThread(() -> {
+                        Toast.makeText(
+                                ImportExportActivity.this,
+                                "Nota eliminata definitivamente",
+                                Toast.LENGTH_SHORT
+                        ).show();
+                        loadNotesWithSettings();
+                    });
+                }).start();
+            }
+
+            @Override
+            public void onPin(Note note) {
+            }
+
+            @Override
+            public void onShare(Note note) {
+            }
+
+            @Override
+            public void onAddTag(Note note, String tag) {
+            }
+
+             public void onRestore(Note note) {
+                if (note == null || !note.isDeleted()) return;
+
+                new Thread(() -> {
+                    noteDao.restore(note.id, System.currentTimeMillis());
+                    runOnUiThread(() -> {
+                        Toast.makeText(
+                                ImportExportActivity.this,
+                                "Nota ripristinata",
+                                Toast.LENGTH_SHORT
+                        ).show();
+                        loadNotesWithSettings();
+                    });
+                }).start();
+            }
+        });
 
         recyclerNotes.setLayoutManager(new LinearLayoutManager(this));
         recyclerNotes.setAdapter(adapter);
 
-        // =========================
-        // LOAD + AGGREGAZIONE
-        // =========================
         loadNotesWithSettings();
 
-        // =========================
-        // SELECT ALL
-        // =========================
         btnSelectAll.setOnClickListener(v -> {
 
             Set<Long> selected = adapter.getSelectedNotes();
-
             if (notes == null) return;
 
             if (selected.size() == notes.size()) {
@@ -91,19 +130,12 @@ public class ImportExportActivity extends AppCompatActivity {
             adapter.notifyDataSetChanged();
         });
 
-        // =========================
-        // EXPORT
-        // =========================
         btnExport.setOnClickListener(v -> exportSelected());
-
-        // =========================
-        // IMPORT
-        // =========================
         btnImport.setOnClickListener(v -> importJson());
     }
 
     // =========================
-    // LOAD NOTES + SETTINGS
+    // LOAD
     // =========================
     private void loadNotesWithSettings() {
 
@@ -130,7 +162,6 @@ public class ImportExportActivity extends AppCompatActivity {
             JSONArray array = new JSONArray();
 
             for (Note n : notes) {
-
                 if (!selected.contains(n.id)) continue;
 
                 JSONObject obj = new JSONObject();
@@ -144,8 +175,7 @@ public class ImportExportActivity extends AppCompatActivity {
                 array.put(obj);
             }
 
-            String json = array.toString(2);
-            txtResult.setText(json);
+            txtResult.setText(array.toString(2));
 
             Toast.makeText(this,
                     "Export: " + array.length() + " note",
@@ -161,49 +191,93 @@ public class ImportExportActivity extends AppCompatActivity {
     // =========================
     private void importJson() {
 
-        try {
-            String input = txtResult.getText().toString();
+        EditText input = new EditText(this);
+        input.setHint("Incolla JSON qui");
 
-            if (input.isEmpty()) {
-                Toast.makeText(this, "Incolla prima un JSON", Toast.LENGTH_SHORT).show();
-                return;
-            }
+        new AlertDialog.Builder(this)
+                .setTitle("Import JSON")
+                .setMessage("Incolla il JSON delle note")
+                .setView(input)
+                .setPositiveButton("Importa", (dialog, which) -> {
 
-            JSONArray array = new JSONArray(input);
+                    String json = input.getText().toString();
 
-            List<Note> toInsert = new ArrayList<>();
+                    if (json.trim().isEmpty()) {
+                        toast("JSON vuoto");
+                        return;
+                    }
 
-            for (int i = 0; i < array.length(); i++) {
+                    try {
+                        JSONArray arr = new JSONArray(json);
 
-                JSONObject obj = array.getJSONObject(i);
+                        List<Note> list = new ArrayList<>();
 
-                Note n = new Note();
+                        for (int i = 0; i < arr.length(); i++) {
 
-                n.uuid = obj.optString("uuid");
-                n.title = obj.optString("title");
-                n.content = obj.optString("content");
-                n.updatedAt = obj.optLong("updatedAt", System.currentTimeMillis());
-                n.setTags(obj.optString("tags"));
+                            JSONObject o = arr.getJSONObject(i);
 
-                toInsert.add(n);
-            }
+                            Note n = new Note();
+                            n.uuid = o.optString("uuid");
+                            n.title = o.optString("title");
+                            n.content = o.optString("content");
+                            n.updatedAt = System.currentTimeMillis();
+                            n.setTags(o.optString("tags"));
 
-            new Thread(() -> {
-                noteDao.insertAll(toInsert);
+                            list.add(n);
+                        }
 
-                runOnUiThread(() -> {
-                    Toast.makeText(this,
-                            "Importate: " + toInsert.size() + " note",
-                            Toast.LENGTH_SHORT).show();
+                        new Thread(() -> {
+                            noteDao.insertAll(list);
 
-                    txtResult.setText("");
-                    loadNotesWithSettings();
-                });
+                            runOnUiThread(() -> {
+                                toast("Import completato: " + list.size() + " note");
+                                loadNotesWithSettings();
+                            });
 
-            }).start();
+                        }).start();
 
-        } catch (Exception e) {
-            txtResult.setText("Errore import: " + e.getMessage());
+                    } catch (Exception e) {
+                        toast("JSON non valido");
+                    }
+                })
+                .setNegativeButton("Annulla", null)
+                .show();
+    }
+
+    private void hardDelete() {
+
+        Set<Long> sel = adapter.getSelectedNotes();
+
+        if (sel.isEmpty()) {
+            toast("Nessuna selezione");
+            return;
         }
+
+        new AlertDialog.Builder(this)
+                .setTitle("Delete permanent?")
+                .setMessage("Irreversibile")
+                .setPositiveButton("Delete", (d, w) -> {
+
+                    new Thread(() -> {
+                        for (Note n : notes) {
+                            if (sel.contains(n.id)) {
+                                noteDao.deleteById(n.id);
+                            }
+                        }
+
+                        runOnUiThread(() -> {
+                            sel.clear();
+                            loadNotesWithSettings();
+                            toast("Deleted");
+                        });
+                    }).start();
+
+                })
+                .setNegativeButton("Cancel", null)
+                .show();
+    }
+
+    private void toast(String m) {
+        Toast.makeText(this, m, Toast.LENGTH_SHORT).show();
     }
 }

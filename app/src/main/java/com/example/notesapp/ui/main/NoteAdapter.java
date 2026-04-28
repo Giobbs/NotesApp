@@ -43,7 +43,7 @@ public class NoteAdapter extends RecyclerView.Adapter<RecyclerView.ViewHolder> {
 
     public enum Mode {
         NORMAL,
-        SELECTABLE
+        IMPORT_EXPORT, SELECTABLE
     }
 
     private Mode mode = Mode.NORMAL;
@@ -95,6 +95,8 @@ public class NoteAdapter extends RecyclerView.Adapter<RecyclerView.ViewHolder> {
         void onShare(Note note);
 
         void onAddTag(Note note, String tag);
+        default void onRestore(Note note) {
+        }
     }
 
     public void setListener(OnNoteActionListener listener) {
@@ -279,8 +281,7 @@ public class NoteAdapter extends RecyclerView.Adapter<RecyclerView.ViewHolder> {
         TextView title, content, updatedAt;
         CheckBox checkSelect;
         MaterialCardView card;
-         ImageButton btnShare, btnPin, btnDelete,btnTag;
-
+        ImageButton btnShare, btnPin, btnDelete, btnTag, btnRestore;
         public NoteViewHolder(@NonNull View itemView) {
             super(itemView);
 
@@ -294,13 +295,15 @@ public class NoteAdapter extends RecyclerView.Adapter<RecyclerView.ViewHolder> {
             btnPin = itemView.findViewById(R.id.btnPin);
             btnDelete = itemView.findViewById(R.id.btnDelete);
             btnTag = itemView.findViewById(R.id.btnAddTag);
+            btnRestore = itemView.findViewById(R.id.btnRestore);
         }
 
         void bind(Note note, Mode mode) {
 
             if (note == null) return;
 
-            boolean selectable = mode == Mode.SELECTABLE;
+            boolean selectable = mode == Mode.SELECTABLE || mode == Mode.IMPORT_EXPORT;
+            boolean importExportMode = mode == Mode.IMPORT_EXPORT;
             boolean pinned = note.isPinned();
 
             // =========================
@@ -333,6 +336,13 @@ public class NoteAdapter extends RecyclerView.Adapter<RecyclerView.ViewHolder> {
             // =========================
             checkSelect.setVisibility(selectable ? View.VISIBLE : View.GONE);
             checkSelect.setChecked(selectedNotes.contains(note.id));
+
+            btnPin.setVisibility(importExportMode ? View.GONE : View.VISIBLE);
+            btnTag.setVisibility(importExportMode ? View.GONE : View.VISIBLE);
+            btnShare.setVisibility(importExportMode ? View.GONE : View.VISIBLE);
+            btnRestore.setVisibility(importExportMode ? View.VISIBLE : View.GONE);
+            btnRestore.setEnabled(importExportMode && note.isDeleted());
+            btnRestore.setAlpha(note.isDeleted() ? 1f : 0.4f);
 
             // =========================
             // CARD CLICK
@@ -454,6 +464,10 @@ public class NoteAdapter extends RecyclerView.Adapter<RecyclerView.ViewHolder> {
                 builder.setNegativeButton("Annulla", null);
 
                 builder.show();
+            });
+
+            btnRestore.setOnClickListener(v -> {
+                if (listener != null) listener.onRestore(note);
             });
 
             // =========================
