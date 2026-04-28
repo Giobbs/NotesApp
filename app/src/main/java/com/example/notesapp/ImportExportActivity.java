@@ -12,6 +12,7 @@ import androidx.recyclerview.widget.RecyclerView;
 import com.example.notesapp.data.local.AppDatabase;
 import com.example.notesapp.data.local.Note;
 import com.example.notesapp.data.local.NoteDao;
+import com.example.notesapp.dto.NoteExportDto;
 import com.example.notesapp.ui.main.NoteAdapter;
 
 import org.json.JSONArray;
@@ -100,17 +101,24 @@ public class ImportExportActivity extends AppCompatActivity {
 
                     if (!selected.contains(n.id)) continue;
 
+                    NoteExportDto dto = new NoteExportDto();
+                    dto.id = n.id;
+                    dto.uuid = n.uuid;
+                    dto.title = n.title;
+                    dto.content = n.content;
+                    dto.updatedAt = n.updatedAt;
+                    dto.tags = n.getTags();
+
                     JSONObject obj = new JSONObject();
-                    obj.put("id", n.id);
-                    obj.put("uuid", n.uuid);
-                    obj.put("title", n.title);
-                    obj.put("content", n.content);
-                    obj.put("updatedAt", n.updatedAt);
-                    obj.put("tags", n.getTags());
+                    obj.put("id", dto.id);
+                    obj.put("uuid", dto.uuid);
+                    obj.put("title", dto.title);
+                    obj.put("content", dto.content);
+                    obj.put("updatedAt", dto.updatedAt);
+                    obj.put("tags", dto.tags);
 
                     array.put(obj);
                 }
-
                 String json = array.toString(2);
 
                 txtResult.setText(json);

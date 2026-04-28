@@ -28,7 +28,7 @@ public class NoteAdapter extends RecyclerView.Adapter<NoteAdapter.NoteViewHolder
     private List<Note> notes = new ArrayList<>();
     private OnNoteActionListener listener;
 
-    private Set<Long> selectedNotes = new HashSet<>();
+    private final Set<Long> selectedNotes = new HashSet<>();
 
     public enum Mode {
         NORMAL,
@@ -116,20 +116,18 @@ public class NoteAdapter extends RecyclerView.Adapter<NoteAdapter.NoteViewHolder
         ) {
 
             if (note == null) return;
-            if (note.isProtected) {
-                card.setAlpha(0.7f);
-            } else {
-                card.setAlpha(1f);
-            }
+
+            boolean selectable = (mode == Mode.SELECTABLE);
+
             // =========================
             // BASIC DATA
             // =========================
             title.setText(note.getTitle());
-            if (note.isProtected) {
-                content.setText("🔒 Contenuto protetto");
-            } else {
-                content.setText(note.getContent());
-            }
+
+            content.setText(
+                    note.isProtected ? "🔒 Contenuto protetto" : note.getContent()
+            );
+
             updatedAt.setText(
                     DateUtils.getRelativeTimeSpanString(
                             note.getUpdatedAt(),
@@ -152,58 +150,74 @@ public class NoteAdapter extends RecyclerView.Adapter<NoteAdapter.NoteViewHolder
             // CLICK NOTE
             // =========================
             card.setOnClickListener(v -> {
-                if (listener != null) listener.onNoteClick(note);
-            });
-
-            delete.setOnClickListener(v -> {
-                if (listener != null) listener.onDelete(note);
-            });
-
-            pin.setOnClickListener(v -> {
-                if (listener != null) listener.onPin(note);
-            });
-
-            share.setOnClickListener(v -> {
-                if (listener != null) listener.onShare(note);
+                if (listener != null && !selectable) {
+                    listener.onNoteClick(note);
+                }
             });
 
             // =========================
-            // ADD TAG
+            // ACTION VISIBILITY (IMPORTANT)
             // =========================
-            addTag.setOnClickListener(v -> {
+            int actionVisibility = selectable ? View.GONE : View.VISIBLE;
 
-                if (listener == null) return;
+            delete.setVisibility(actionVisibility);
+            pin.setVisibility(actionVisibility);
+            share.setVisibility(actionVisibility);
+            addTag.setVisibility(actionVisibility);
 
-                AlertDialog.Builder builder =
-                        new AlertDialog.Builder(itemView.getContext());
+            // =========================
+            // ACTIONS (only NORMAL)
+            // =========================
+            if (!selectable) {
 
-                builder.setTitle("Aggiungi tag");
-
-                EditText input = new EditText(itemView.getContext());
-                input.setHint("es: android, work");
-
-                builder.setView(input);
-
-                builder.setPositiveButton("OK", (dialog, which) -> {
-
-                    String tag = input.getText().toString().trim();
-
-                    if (!tag.isEmpty()) {
-                        listener.onAddTag(note, tag);
-                    }
+                delete.setOnClickListener(v -> {
+                    if (listener != null) listener.onDelete(note);
                 });
 
-                builder.setNegativeButton("Annulla", null);
+                pin.setOnClickListener(v -> {
+                    if (listener != null) listener.onPin(note);
+                });
 
-                builder.show();
-            });
+                share.setOnClickListener(v -> {
+                    if (listener != null) listener.onShare(note);
+                });
+
+                addTag.setOnClickListener(v -> {
+
+                    if (listener == null) return;
+
+                    AlertDialog.Builder builder =
+                            new AlertDialog.Builder(itemView.getContext());
+
+                    builder.setTitle("Aggiungi tag");
+
+                    EditText input = new EditText(itemView.getContext());
+                    input.setHint("es: android, work");
+
+                    builder.setView(input);
+
+                    builder.setPositiveButton("OK", (dialog, which) -> {
+
+                        String tag = input.getText().toString().trim();
+
+                        if (!tag.isEmpty()) {
+                            listener.onAddTag(note, tag);
+                        }
+                    });
+
+                    builder.setNegativeButton("Annulla", null);
+
+                    builder.show();
+                });
+            }
 
             // =========================
             // SELECT MODE
             // =========================
-            if (mode == Mode.SELECTABLE) {
+            checkSelect.setVisibility(selectable ? View.VISIBLE : View.GONE);
 
-                checkSelect.setVisibility(View.VISIBLE);
+            if (selectable) {
+
                 checkSelect.setOnCheckedChangeListener(null);
                 checkSelect.setChecked(selectedNotes.contains(note.id));
 
@@ -213,26 +227,36 @@ public class NoteAdapter extends RecyclerView.Adapter<NoteAdapter.NoteViewHolder
                 });
 
             } else {
-                checkSelect.setVisibility(View.GONE);
+                checkSelect.setOnCheckedChangeListener(null);
                 checkSelect.setChecked(false);
             }
 
             // =========================
-            // PIN UI
+            // PIN UI (ONLY NORMAL MODE)
             // =========================
-            boolean pinned = note.isPinned();
+            if (!selectable) {
 
-            pin.setImageResource(
-                    pinned ? android.R.drawable.star_on : android.R.drawable.star_off
-            );
+                boolean pinned = note.isPinned();
 
-            card.setStrokeWidth(pinned ? 6 : 0);
+                pin.setImageResource(
+                        pinned ? android.R.drawable.star_on : android.R.drawable.star_off
+                );
 
-            card.setStrokeColor(
-                    pinned
-                            ? ContextCompat.getColor(itemView.getContext(), android.R.color.holo_orange_light)
-                            : ContextCompat.getColor(itemView.getContext(), android.R.color.transparent)
-            );
+                card.setStrokeWidth(pinned ? 6 : 0);
+
+                card.setStrokeColor(
+                        pinned
+                                ? ContextCompat.getColor(itemView.getContext(), android.R.color.holo_orange_light)
+                                : ContextCompat.getColor(itemView.getContext(), android.R.color.transparent)
+                );
+            } else {
+                card.setStrokeWidth(0);
+            }
+
+            // =========================
+            // VISUAL PROTECTION STATE
+            // =========================
+            card.setAlpha(note.isProtected ? 0.7f : 1f);
         }
     }
 }
