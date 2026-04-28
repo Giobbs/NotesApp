@@ -61,7 +61,7 @@ public class MainActivity extends AppCompatActivity {
         SharedPreferences prefs = getSharedPreferences(SettingsActivity.PREFS_NAME, MODE_PRIVATE);
 
         // 🔹 Apply tema PRIMA della view
-        SettingsActivity.applyTheme(prefs);
+        ThemeManager.apply(prefs);
 
         setContentView(R.layout.activity_main);
 

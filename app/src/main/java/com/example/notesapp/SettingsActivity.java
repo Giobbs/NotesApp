@@ -2,12 +2,13 @@ package com.example.notesapp;
 
 import android.content.SharedPreferences;
 import android.os.Bundle;
-
-import androidx.appcompat.app.AppCompatActivity;
-import androidx.appcompat.app.AppCompatDelegate;
-
+import android.widget.Button;
+import android.widget.EditText;
 import android.widget.RadioButton;
 import android.widget.RadioGroup;
+import android.widget.Toast;
+
+import androidx.appcompat.app.AppCompatActivity;
 
 public class SettingsActivity extends AppCompatActivity {
 
@@ -16,13 +17,17 @@ public class SettingsActivity extends AppCompatActivity {
     public static final String KEY_AGGREGATION = "aggregation";
     public static final String KEY_DATE_RANGE = "date_range";
     public static final String KEY_PIN = "user_pin";
+
     @Override
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
 
-        setContentView(R.layout.activity_settings);
-
         SharedPreferences prefs = getSharedPreferences(PREFS_NAME, MODE_PRIVATE);
+
+        // ⚡ importante: applica tema prima UI
+        ThemeManager.apply(prefs);
+
+        setContentView(R.layout.activity_settings);
 
         // =========================
         // THEME
@@ -32,13 +37,13 @@ public class SettingsActivity extends AppCompatActivity {
         RadioButton light = findViewById(R.id.themeLight);
         RadioButton dark = findViewById(R.id.themeDark);
 
-        String currentTheme = prefs.getString(KEY_THEME, "system");
+        String currentTheme = prefs.getString(KEY_THEME, ThemeManager.THEME_SYSTEM);
 
         switch (currentTheme) {
-            case "light":
+            case ThemeManager.THEME_LIGHT:
                 light.setChecked(true);
                 break;
-            case "dark":
+            case ThemeManager.THEME_DARK:
                 dark.setChecked(true);
                 break;
             default:
@@ -48,16 +53,16 @@ public class SettingsActivity extends AppCompatActivity {
 
         themeGroup.setOnCheckedChangeListener((group, checkedId) -> {
 
-            String value = "system";
+            String value = ThemeManager.THEME_SYSTEM;
 
-            if (checkedId == R.id.themeLight) value = "light";
-            else if (checkedId == R.id.themeDark) value = "dark";
+            if (checkedId == R.id.themeLight) value = ThemeManager.THEME_LIGHT;
+            else if (checkedId == R.id.themeDark) value = ThemeManager.THEME_DARK;
 
             prefs.edit()
                     .putString(KEY_THEME, value)
                     .apply();
 
-            applyTheme(prefs);
+            ThemeManager.apply(prefs);
             recreate();
         });
 
@@ -131,8 +136,11 @@ public class SettingsActivity extends AppCompatActivity {
                     .apply();
         });
 
-        android.widget.EditText editPin = findViewById(R.id.editPin);
-        android.widget.Button btnSavePin = findViewById(R.id.btnSavePin);
+        // =========================
+        // PIN
+        // =========================
+        EditText editPin = findViewById(R.id.editPin);
+        Button btnSavePin = findViewById(R.id.btnSavePin);
 
         String savedPin = prefs.getString(KEY_PIN, "");
         editPin.setText(savedPin);
@@ -142,9 +150,7 @@ public class SettingsActivity extends AppCompatActivity {
             String pin = editPin.getText().toString().trim();
 
             if (pin.length() < 4) {
-                android.widget.Toast.makeText(this,
-                        "PIN troppo corto",
-                        android.widget.Toast.LENGTH_SHORT).show();
+                Toast.makeText(this, "PIN troppo corto", Toast.LENGTH_SHORT).show();
                 return;
             }
 
@@ -152,20 +158,7 @@ public class SettingsActivity extends AppCompatActivity {
                     .putString(KEY_PIN, pin)
                     .apply();
 
-            android.widget.Toast.makeText(this,
-                    "PIN salvato",
-                    android.widget.Toast.LENGTH_SHORT).show();
+            Toast.makeText(this, "PIN salvato", Toast.LENGTH_SHORT).show();
         });
     }
-    public static void applyTheme(SharedPreferences prefs) {
-
-        String theme = prefs.getString(KEY_THEME, "system");
-
-        if ("light".equals(theme)) {
-            AppCompatDelegate.setDefaultNightMode(AppCompatDelegate.MODE_NIGHT_NO);
-        } else if ("dark".equals(theme)) {
-            AppCompatDelegate.setDefaultNightMode(AppCompatDelegate.MODE_NIGHT_YES);
-        } else {
-            AppCompatDelegate.setDefaultNightMode(AppCompatDelegate.MODE_NIGHT_FOLLOW_SYSTEM);
-        }
-    }}
+}

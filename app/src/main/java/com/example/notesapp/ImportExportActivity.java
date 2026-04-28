@@ -58,7 +58,7 @@ public class ImportExportActivity extends AppCompatActivity {
         super.onCreate(savedInstanceState);
 
         SharedPreferences prefs = getSharedPreferences(SettingsActivity.PREFS_NAME, MODE_PRIVATE);
-        SettingsActivity.applyTheme(prefs);
+        ThemeManager.apply(prefs);
 
         setContentView(R.layout.activity_import_export);
 

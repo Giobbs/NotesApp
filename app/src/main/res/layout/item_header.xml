@@ -4,5 +4,4 @@
     android:layout_height="wrap_content"
     android:textStyle="bold"
     android:textSize="14sp"
-    android:padding="12dp"
-    android:background="#EEEEEE"/>
+    android:padding="12dp" />
