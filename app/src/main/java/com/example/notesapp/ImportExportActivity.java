@@ -455,9 +455,9 @@ public class ImportExportActivity extends AppCompatActivity {
     }
     private void deleteSelected() {
 
-        Set<Long> selected = adapter.getSelectedNotes();
+        Set<Long> selected = new HashSet<>(adapter.getSelectedNotes());
 
-        if (selected == null || selected.isEmpty()) {
+        if (selected.isEmpty()) {
             toast("Nessuna nota selezionata");
             return;
         }
@@ -469,50 +469,61 @@ public class ImportExportActivity extends AppCompatActivity {
 
                     new Thread(() -> {
 
+                         List<Note> backupNotes = new ArrayList<>();
+
                         for (Long id : selected) {
+                            Note n = noteDao.getNoteByIdSync(id);
+                            if (n != null) {
+                                backupNotes.add(n);
+                            }
+                        }
+
+                         for (Long id : selected) {
                             noteDao.deleteById(id);
                         }
 
                         runOnUiThread(() -> {
-                            toast("Note eliminate: " + selected.size());
-                            selected.clear();
+
+                            toast("Note eliminate: " + backupNotes.size());
+
                             adapter.getSelectedNotes().clear();
                             adapter.notifyDataSetChanged();
                             loadNotesWithSettings();
+
+                            // ✅ UNDO con reinserimento
+                            UINotifier.showUndo(
+                                    findViewById(android.R.id.content),
+                                    "Eliminate " + backupNotes.size() + " note",
+                                    "Annulla",
+                                    () -> {
+
+                                        new Thread(() -> {
+
+                                            // 🔁 RE-INSERT
+                                            noteDao.insertAll(backupNotes);
+
+                                            runOnUiThread(() -> {
+
+                                                loadNotesWithSettings();
+
+                                                UINotifier.showSuccess(
+                                                        findViewById(android.R.id.content),
+                                                        "Ripristinate " + backupNotes.size() + " note"
+                                                );
+                                            });
+
+                                        }).start();
+                                    }
+                            );
                         });
-                        Set<Long> deletedIds = new HashSet<>(selected);
 
-                        UINotifier.showUndo(
-                                findViewById(android.R.id.content),
-                                "Eliminate " + deletedIds.size() + " note",
-                                "Annulla",
-                                () -> {
-
-                                    new Thread(() -> {
-
-                                        for (Long id : deletedIds) {
-                                            noteDao.restore(id, System.currentTimeMillis());
-                                        }
-
-                                        runOnUiThread(() -> {
-
-                                            loadNotesWithSettings();
-
-                                            UINotifier.showSuccess(
-                                                    findViewById(android.R.id.content),
-                                                    "Ripristinate " + deletedIds.size() + " note"
-                                            );
-                                        });
-
-                                    }).start();
-                                }
-                        );
                     }).start();
 
                 })
                 .setNegativeButton("Annulla", null)
                 .show();
     }
+
     // =========================
     // UTIL
     // =========================
