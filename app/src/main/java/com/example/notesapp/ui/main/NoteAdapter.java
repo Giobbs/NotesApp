@@ -491,5 +491,9 @@ public class NoteAdapter extends RecyclerView.Adapter<RecyclerView.ViewHolder> {
             // PROTECTION
             // =========================
             card.setAlpha(note.isProtected ? 0.7f : 1f);
-        }    }
+        }
+    }
+    public List<Note> getCurrentList() {
+        return new ArrayList<>(lastNotes);
+    }
 }

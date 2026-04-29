@@ -326,4 +326,19 @@ public class Note {
 
         return new ArrayList<>(clean);
     }
+
+    public List<String> getNormalizedTagList() {
+
+        List<String> result = new ArrayList<>();
+
+        if (getTagList() == null) return result;
+
+        for (String t : getTagList()) {
+            if (t != null) {
+                result.add(t.trim().toLowerCase());
+            }
+        }
+
+        return result;
+    }
 }

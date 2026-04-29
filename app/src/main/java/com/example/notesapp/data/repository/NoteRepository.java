@@ -1,11 +1,13 @@
 package com.example.notesapp.data.repository;
 
 import androidx.lifecycle.LiveData;
+import androidx.lifecycle.MediatorLiveData;
 
 import com.example.notesapp.data.local.Note;
 import com.example.notesapp.data.local.NoteDao;
 import com.example.notesapp.data.local.SortType;
 
+import java.util.ArrayList;
 import java.util.List;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
@@ -28,7 +30,7 @@ public class NoteRepository {
             String query,
             SortType sortType,
             boolean pinnedOnly,
-            String tag
+            String tag // puoi anche lasciarlo per compatibilità
     ) {
 
         String cleanQuery = (query == null || query.trim().isEmpty())
@@ -38,7 +40,6 @@ public class NoteRepository {
         return noteDao.getFilteredNotes(
                 pinnedOnly,
                 cleanQuery,
-                tag,
                 sortType.name()
         );
     }
@@ -160,5 +161,62 @@ public class NoteRepository {
         return noteDao.getByTag(tag);
     }
 
+    public LiveData<List<Note>> getNotesMultiTag(
+            String query,
+            SortType sortType,
+            boolean pinnedOnly,
+            List<String> tags
+    ) {
 
+        LiveData<List<Note>> source = noteDao.getFilteredNotes(
+                pinnedOnly,
+                (query == null || query.trim().isEmpty()) ? null : query.trim(),
+                sortType.name()
+        );
+
+        MediatorLiveData<List<Note>> result = new MediatorLiveData<>();
+
+        result.addSource(source, notes -> {
+
+             if (tags == null || tags.isEmpty()) {
+                result.setValue(notes);
+                return;
+            }
+
+            List<Note> filtered = new ArrayList<>();
+
+            for (Note note : notes) {
+
+                 List<String> noteTags = new ArrayList<>();
+
+                if (note.getTagList() != null) {
+                    for (String t : note.getTagList()) {
+                        if (t != null) {
+                            noteTags.add(t.trim().toLowerCase());
+                        }
+                    }
+                }
+
+                boolean matchAll = true;
+
+                for (String tag : tags) {
+
+                    String normalized = tag.trim().toLowerCase();
+
+                    if (!noteTags.contains(normalized)) {
+                        matchAll = false;
+                        break;
+                    }
+                }
+
+                if (matchAll) {
+                    filtered.add(note);
+                }
+            }
+
+            result.setValue(filtered);
+        });
+
+        return result;
+    }
 }

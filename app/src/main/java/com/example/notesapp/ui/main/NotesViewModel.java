@@ -13,6 +13,7 @@ import com.example.notesapp.data.local.Note;
 import com.example.notesapp.data.local.SortType;
 import com.example.notesapp.data.repository.NoteRepository;
 
+import java.util.ArrayList;
 import java.util.List;
 
 public class NotesViewModel extends AndroidViewModel {
@@ -22,8 +23,7 @@ public class NotesViewModel extends AndroidViewModel {
     private final MutableLiveData<Boolean> showPinnedOnly = new MutableLiveData<>(false);
     private final MutableLiveData<String> searchQuery = new MutableLiveData<>("");
     private final MutableLiveData<SortType> sortType = new MutableLiveData<>(SortType.DATE_DESC);
-    private final MutableLiveData<String> tagFilter = new MutableLiveData<>(null);
-
+    private final MutableLiveData<List<String>> tagFilters = new MutableLiveData<>(null);
     private final MediatorLiveData<List<Note>> visibleNotes = new MediatorLiveData<>();
     private LiveData<List<Note>> currentSource;
 
@@ -37,7 +37,7 @@ public class NotesViewModel extends AndroidViewModel {
         visibleNotes.addSource(showPinnedOnly, v -> refresh());
         visibleNotes.addSource(searchQuery, v -> refresh());
         visibleNotes.addSource(sortType, v -> refresh());
-        visibleNotes.addSource(tagFilter, v -> refresh());
+        visibleNotes.addSource(tagFilters, v -> refresh());
 
         refresh();
     }
@@ -47,13 +47,13 @@ public class NotesViewModel extends AndroidViewModel {
         Boolean pinned = showPinnedOnly.getValue();
         String query = searchQuery.getValue();
         SortType sort = sortType.getValue();
-        String tag = tagFilter.getValue();
+        List<String> tags = tagFilters.getValue();
 
-        LiveData<List<Note>> newSource = repository.getNotes(
+        LiveData<List<Note>> newSource =repository.getNotesMultiTag(
                 query,
                 sort,
                 Boolean.TRUE.equals(pinned),
-                tag
+                tags
         );
 
         if (currentSource != null) {
@@ -89,9 +89,12 @@ public class NotesViewModel extends AndroidViewModel {
     }
 
     public void setTagFilter(String tag) {
-        tagFilter.setValue(tag != null && tag.trim().isEmpty() ? null : tag);
+        if (tag == null || tag.trim().isEmpty()) {
+            tagFilters.setValue(null);
+        } else {
+            tagFilters.setValue(java.util.List.of(tag.trim().toLowerCase()));
+        }
     }
-
     // =========================
     // CRUD
     // =========================
@@ -122,4 +125,23 @@ public class NotesViewModel extends AndroidViewModel {
     public void updateTags(long noteId, String tags) {
         repository.updateTags(noteId, tags);
     }
+
+    public void setTagFilters(List<String> tags) {
+
+        if (tags == null || tags.isEmpty()) {
+            tagFilters.setValue(null);
+            return;
+        }
+
+        List<String> normalized = new ArrayList<>();
+
+        for (String t : tags) {
+            if (t != null && !t.trim().isEmpty()) {
+                normalized.add(t.trim().toLowerCase());
+            }
+        }
+
+        tagFilters.setValue(normalized.isEmpty() ? null : normalized);
+    }
+
 }

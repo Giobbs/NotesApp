@@ -125,8 +125,7 @@ public interface NoteDao {
     @Query("UPDATE notes SET tags = :tags, updatedAt = :timestamp WHERE id = :id")
     int updateTags(long id, String tags, long timestamp);
 
-    @Query("SELECT * FROM notes")
-    List<Note> getAllNotesSync();
+
     @Query("""
 SELECT * FROM notes
 WHERE deleted = 0
@@ -135,11 +134,7 @@ AND (:pinnedOnly = 0 OR pinned = 1)
 
 AND (:query IS NULL OR 
      title LIKE '%' || :query || '%' OR 
-     content LIKE '%' || :query || '%' OR 
-     tags LIKE '%' || :query || '%')
-
-AND (:tag IS NULL OR :tag = '' OR 
-     (',' || tags || ',') LIKE '%,' || :tag || ',%')
+     content LIKE '%' || :query || '%')
 
 ORDER BY 
     pinned DESC,
@@ -151,12 +146,19 @@ ORDER BY
     LiveData<List<Note>> getFilteredNotes(
             boolean pinnedOnly,
             String query,
-            String tag,
             String sort
     );
+
     @Query("SELECT * FROM notes WHERE id = :id LIMIT 1")
     Note getNoteByIdSync(long id);
 
     @Query("SELECT * FROM notes ORDER BY id DESC LIMIT 3")
     List<Note> getRecentNotes();
+
+    @Query("""
+SELECT * FROM notes
+WHERE deleted = 0
+ORDER BY pinned DESC, updatedAt DESC
+""")
+    List<Note> getAllNotesSync();
 }

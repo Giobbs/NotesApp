@@ -4,7 +4,10 @@ import android.content.Intent;
 import android.content.SharedPreferences;
 import android.os.Bundle;
 import android.widget.Button;
+import android.widget.EditText;
 import android.widget.ImageButton;
+import android.widget.LinearLayout;
+import android.widget.TextView;
 import android.widget.Toast;
 
 import androidx.annotation.NonNull;
@@ -25,7 +28,9 @@ import com.example.notesapp.ui.widget.WidgetUpdater;
 import com.google.android.material.floatingactionbutton.FloatingActionButton;
 
 import java.util.ArrayList;
+import java.util.LinkedHashSet;
 import java.util.List;
+import java.util.Set;
 import java.util.concurrent.Executor;
 
 public class MainActivity extends AppCompatActivity {
@@ -267,34 +272,146 @@ public class MainActivity extends AppCompatActivity {
 
         btnTagFilter.setOnClickListener(v -> {
 
+            List<Note> currentNotes = adapter.getCurrentList();
+            List<String> allTags = extractAllTags(currentNotes);
+
+            Set<String> selectedTags = new LinkedHashSet<>();
+
             android.app.AlertDialog.Builder builder =
                     new android.app.AlertDialog.Builder(this);
 
             builder.setTitle("Filtra per tag");
 
-            final android.widget.EditText input =
-                    new android.widget.EditText(this);
+            // =========================
+            // ROOT SCROLL CONTAINER
+            // =========================
+            android.widget.ScrollView scrollView = new android.widget.ScrollView(this);
 
-            input.setHint("es: android, java, work");
+            LinearLayout container = new LinearLayout(this);
+            container.setOrientation(LinearLayout.VERTICAL);
+            container.setPadding(40, 30, 40, 30);
 
-            builder.setView(input);
+            scrollView.addView(container);
 
-            builder.setPositiveButton("Filtra", (dialog, which) -> {
+            // =========================
+            // INPUT MANUALE TAG
+            // =========================
+            EditText input = new EditText(this);
+            input.setHint("Aggiungi tag manuale...");
+            input.setPadding(20, 20, 20, 20);
+            container.addView(input);
 
-                String tag = clean(input.getText().toString());
+            // =========================
+            // SELECTED LABEL
+            // =========================
+            TextView selectedLabel = new TextView(this);
+            selectedLabel.setText("Selezionati:");
+            selectedLabel.setPadding(0, 25, 0, 10);
+            container.addView(selectedLabel);
 
-                if (tag.isEmpty()) {
-                    viewModel.setTagFilter(null); // 🔥 SOLO NULL = OFF
+            // =========================
+            // SELECTED CONTAINER
+            // =========================
+            LinearLayout selectedContainer = new LinearLayout(this);
+            selectedContainer.setOrientation(LinearLayout.VERTICAL);
+            container.addView(selectedContainer);
+
+            // =========================
+            // AVAILABLE LABEL
+            // =========================
+            TextView availableLabel = new TextView(this);
+            availableLabel.setText("Disponibili:");
+            availableLabel.setPadding(0, 30, 0, 10);
+            container.addView(availableLabel);
+
+            // =========================
+            // TAG GRID (WRAPPING)
+            // =========================
+            android.widget.GridLayout tagContainer = new android.widget.GridLayout(this);
+            tagContainer.setColumnCount(3);
+            tagContainer.setUseDefaultMargins(true);
+
+            container.addView(tagContainer);
+
+            // =========================
+            // ADD SELECTED CHIP
+            // =========================
+            java.util.function.Consumer<String> addSelectedChip = tag -> {
+
+                com.google.android.material.chip.Chip chip =
+                        new com.google.android.material.chip.Chip(this);
+
+                chip.setText(tag);
+                chip.setCloseIconVisible(true);
+                chip.setCheckable(false);
+
+                chip.setOnCloseIconClickListener(x -> {
+                    selectedTags.remove(tag);
+                    selectedContainer.removeView(chip);
+                });
+
+                selectedContainer.addView(chip);
+            };
+
+            // =========================
+            // BUILD AVAILABLE TAGS
+            // =========================
+            for (String tag : allTags) {
+
+                com.google.android.material.button.MaterialButton chip =
+                        new com.google.android.material.button.MaterialButton(this);
+
+                chip.setText(tag);
+                chip.setAllCaps(false);
+                chip.setCornerRadius(50);
+                chip.setStrokeWidth(2);
+                chip.setAlpha(0.6f);
+                chip.setPadding(30, 10, 30, 10);
+
+                chip.setOnClickListener(c -> {
+
+                    if (selectedTags.contains(tag)) {
+
+                        selectedTags.remove(tag);
+                        chip.setAlpha(0.6f);
+                        chip.setStrokeWidth(2);
+
+                    } else {
+
+                        selectedTags.add(tag);
+                        chip.setAlpha(1f);
+                        chip.setStrokeWidth(0);
+
+                        addSelectedChip.accept(tag);
+                    }
+                });
+
+                tagContainer.addView(chip);
+            }
+
+            // =========================
+            // DIALOG VIEW
+            // =========================
+            builder.setView(scrollView);
+
+            builder.setPositiveButton("Applica", (dialog, which) -> {
+
+                List<String> manual = Note.parseTags(input.getText().toString());
+                selectedTags.addAll(manual);
+
+                if (selectedTags.isEmpty()) {
+                    viewModel.setTagFilters(null);
                     btnTagFilter.setText("Tag OFF");
                 } else {
-                    viewModel.setTagFilter(tag);
-                    btnTagFilter.setText("Tag: " + tag);
+                    List<String> finalTags = new ArrayList<>(selectedTags);
+                    viewModel.setTagFilters(finalTags);
+                    btnTagFilter.setText("Tags: " + String.join(", ", finalTags));
                 }
             });
 
             builder.setNegativeButton("Reset", (dialog, which) -> {
-                viewModel.setTagFilter(null); // 🔥 FIX
-                btnTagFilter.setText("Tags OFF");
+                viewModel.setTagFilters(null);
+                btnTagFilter.setText("Tag OFF");
             });
 
             builder.show();
@@ -426,5 +543,14 @@ public class MainActivity extends AppCompatActivity {
                 .setNegativeButton("Annulla", null)
                 .show();
     }
+    private List<String> extractAllTags(List<Note> notes) {
 
+        Set<String> tags = new LinkedHashSet<>();
+
+        for (Note n : notes) {
+            tags.addAll(n.getTagList());
+        }
+
+        return new ArrayList<>(tags);
+    }
 }
