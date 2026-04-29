@@ -490,8 +490,7 @@ public class ImportExportActivity extends AppCompatActivity {
                             adapter.notifyDataSetChanged();
                             loadNotesWithSettings();
 
-                            // ✅ UNDO con reinserimento
-                            UINotifier.showUndo(
+                             UINotifier.showUndo(
                                     findViewById(android.R.id.content),
                                     "Eliminate " + backupNotes.size() + " note",
                                     "Annulla",
