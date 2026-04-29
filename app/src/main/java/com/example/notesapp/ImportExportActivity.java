@@ -160,7 +160,7 @@ public class ImportExportActivity extends AppCompatActivity {
     private void loadNotesWithSettings() {
         new Thread(() -> {
 
-            notes = noteDao.getAllNotesSync();
+            notes = noteDao.getAllIncludingDeleted();
 
             SharedPreferences prefs = getSharedPreferences(SettingsActivity.PREFS_NAME, MODE_PRIVATE);
             String aggregation = prefs.getString(SettingsActivity.KEY_AGGREGATION, "none");

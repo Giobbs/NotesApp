@@ -161,4 +161,7 @@ WHERE deleted = 0
 ORDER BY pinned DESC, updatedAt DESC
 """)
     List<Note> getAllNotesSync();
+
+    @Query("SELECT * FROM notes")
+    List<Note> getAllIncludingDeleted();
 }
