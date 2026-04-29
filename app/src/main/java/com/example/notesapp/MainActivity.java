@@ -3,6 +3,7 @@ package com.example.notesapp;
 import android.content.Intent;
 import android.content.SharedPreferences;
 import android.os.Bundle;
+import android.view.View;
 import android.widget.Button;
 import android.widget.EditText;
 import android.widget.ImageButton;
@@ -25,6 +26,7 @@ import com.example.notesapp.data.local.SortType;
 import com.example.notesapp.ui.main.NoteAdapter;
 import com.example.notesapp.ui.main.NotesViewModel;
 import com.example.notesapp.ui.widget.WidgetUpdater;
+import com.example.notesapp.util.UINotifier;
 import com.google.android.material.floatingactionbutton.FloatingActionButton;
 
 import java.util.ArrayList;
@@ -172,28 +174,55 @@ public class MainActivity extends AppCompatActivity {
             @Override
             public void onDelete(Note note) {
 
+                View root = findViewById(android.R.id.content);
+
                 viewModel.delete(note, null);
                 WidgetUpdater.update(MainActivity.this);
 
-                com.google.android.material.snackbar.Snackbar.make(
-                        findViewById(android.R.id.content),
-                        "Nota eliminata",
-                        com.google.android.material.snackbar.Snackbar.LENGTH_LONG
-                ).setAction("UNDO", v -> {
+                UINotifier.showUndo(
+                        root,
+                        "Spostata nel cestino",
+                        "Ripristina",
+                        () -> {
 
-                    viewModel.insert(note,null);
-                    WidgetUpdater.update(MainActivity.this);
+                            viewModel.restore(note.id, () -> {
 
-                }).show();
+                                runOnUiThread(() -> {
+
+                                    WidgetUpdater.update(MainActivity.this);
+
+
+                                    root.post(() -> {
+                                        UINotifier.showSuccess(root, "Ripristinata");
+                                    });
+                                });
+                            });
+                        }
+                );
             }
-
             @Override
             public void onPin(Note note) {
-                viewModel.setPinned(note.id, !note.isPinned());
+
+                View root = findViewById(android.R.id.content);
+
+                boolean newState = !note.isPinned();
+
+                viewModel.setPinned(note.id, newState);
                 WidgetUpdater.update(MainActivity.this);
 
-            }
+                findViewById(android.R.id.content)
+                        .performHapticFeedback(android.view.HapticFeedbackConstants.VIRTUAL_KEY);
 
+                UINotifier.showUndo(
+                        root,
+                        newState ? "Aggiunta ai preferiti 📌" : "Rimossa dai preferiti",
+                        "Annulla",
+                        () -> {
+                            viewModel.setPinned(note.id, !newState);
+                            WidgetUpdater.update(MainActivity.this);
+                        }
+                );
+            }
             @Override
             public void onShare(Note note) {
                 Intent shareIntent = new Intent(Intent.ACTION_SEND);
@@ -205,9 +234,23 @@ public class MainActivity extends AppCompatActivity {
 
             @Override
             public void onAddTag(Note note, String tag) {
-                viewModel.updateTags(note.id, tag);
+
+                View root = findViewById(android.R.id.content);
+
+                String clean = tag == null ? "" : tag.trim();
+
+                if (clean.isEmpty()) {
+                    UINotifier.showError(root, "Tag non valido");
+                    return;
+                }
+
+                viewModel.updateTags(note.id, clean);
                 WidgetUpdater.update(MainActivity.this);
 
+                UINotifier.showSuccess(
+                        root,
+                        "Tag aggiunto: " + clean
+                );
             }
         });
     }

@@ -144,4 +144,8 @@ public class NotesViewModel extends AndroidViewModel {
         tagFilters.setValue(normalized.isEmpty() ? null : normalized);
     }
 
+    public void restore(long id, Runnable onDone) {
+        repository.restore(id, onDone);
+    }
+
 }

@@ -20,6 +20,7 @@ import com.example.notesapp.data.local.AppDatabase;
 import com.example.notesapp.data.local.Note;
 import com.example.notesapp.data.local.NoteDao;
 import com.example.notesapp.ui.main.NoteAdapter;
+import com.example.notesapp.util.UINotifier;
 
 import org.json.JSONArray;
 import org.json.JSONObject;
@@ -28,6 +29,7 @@ import java.io.OutputStream;
 import java.nio.charset.StandardCharsets;
 import java.util.ArrayList;
 import java.util.Arrays;
+import java.util.HashSet;
 import java.util.List;
 import java.util.Locale;
 import java.util.Set;
@@ -80,19 +82,25 @@ public class ImportExportActivity extends AppCompatActivity {
 
             @Override
             public void onDelete(Note note) {
+
                 if (note == null) return;
 
                 new android.app.AlertDialog.Builder(ImportExportActivity.this)
-                        .setTitle("Eliminazione definitiva")
-                        .setMessage("Sei sicuro di voler eliminare definitivamente questa nota?")
+                        .setTitle("Eliminare definitivamente?")
+                        .setMessage("Questa azione non può essere annullata")
                         .setPositiveButton("Elimina", (dialog, which) -> {
 
                             new Thread(() -> {
                                 noteDao.deleteById(note.id);
 
                                 runOnUiThread(() -> {
-                                    toast("Nota eliminata definitivamente");
+
                                     loadNotesWithSettings();
+
+                                    UINotifier.showError(
+                                            findViewById(android.R.id.content),
+                                            "Nota eliminata definitivamente"
+                                    );
                                 });
 
                             }).start();
@@ -108,10 +116,13 @@ public class ImportExportActivity extends AppCompatActivity {
             @Override
             public void onShare(Note note) {}
 
-             @Override
+            @Override
             public void onAddTag(Note note, String tag) {
 
-                if (note == null || tag == null || tag.trim().isEmpty()) return;
+                if (note == null || tag == null || tag.trim().isEmpty()) {
+                    UINotifier.showError(findViewById(android.R.id.content), "Tag non valido");
+                    return;
+                }
 
                 new Thread(() -> {
 
@@ -119,27 +130,42 @@ public class ImportExportActivity extends AppCompatActivity {
                     if (dbNote == null) return;
 
                     dbNote.addTagSafe(tag.trim());
-
                     noteDao.update(dbNote);
 
                     runOnUiThread(() -> {
-                        toast("Tag aggiunto");
+
                         loadNotesWithSettings();
+
+                        UINotifier.showSuccess(
+                                findViewById(android.R.id.content),
+                                "Tag aggiunto: " + tag.trim()
+                        );
                     });
 
                 }).start();
+
             }
             @Override
             public void onRestore(Note note) {
+
                 if (note == null || !note.isDeleted()) return;
 
                 new Thread(() -> {
+
                     noteDao.restore(note.id, System.currentTimeMillis());
+
                     runOnUiThread(() -> {
-                        toast("Nota ripristinata");
+
                         loadNotesWithSettings();
+
+                        UINotifier.showSuccess(
+                                findViewById(android.R.id.content),
+                                "Nota ripristinata"
+                        );
                     });
+
                 }).start();
+
             }
         });
 
@@ -158,14 +184,21 @@ public class ImportExportActivity extends AppCompatActivity {
     // LOAD
     // =========================
     private void loadNotesWithSettings() {
+
         new Thread(() -> {
 
             notes = noteDao.getAllIncludingDeleted();
 
-            SharedPreferences prefs = getSharedPreferences(SettingsActivity.PREFS_NAME, MODE_PRIVATE);
+            SharedPreferences prefs =
+                    getSharedPreferences(SettingsActivity.PREFS_NAME, MODE_PRIVATE);
+
             String aggregation = prefs.getString(SettingsActivity.KEY_AGGREGATION, "none");
 
-            runOnUiThread(() -> adapter.setNotes(notes, aggregation));
+            runOnUiThread(() -> {
+                adapter.setNotes(notes, aggregation);
+
+
+            });
 
         }).start();
     }
@@ -226,7 +259,10 @@ public class ImportExportActivity extends AppCompatActivity {
             toast("Export: " + array.length() + " note");
 
             showExportOptionsDialog();
-
+            UINotifier.showSuccess(
+                    findViewById(android.R.id.content),
+                    "Export creato: " + array.length() + " note"
+            );
         } catch (Exception e) {
             txtResult.setText("Errore export: " + e.getMessage());
         }
@@ -347,7 +383,10 @@ public class ImportExportActivity extends AppCompatActivity {
                         }
 
                         showImportPreview(list);
-
+                        UINotifier.showSuccess(
+                                findViewById(android.R.id.content),
+                                "Import completato: " + list.size()
+                        );
                     } catch (Exception e) {
                         toast("JSON non valido");
                     }
@@ -355,6 +394,7 @@ public class ImportExportActivity extends AppCompatActivity {
                 })
                 .setNegativeButton("Annulla", null)
                 .show();
+
     }
     private String generateJsonTemplate() {
 
@@ -440,7 +480,33 @@ public class ImportExportActivity extends AppCompatActivity {
                             adapter.notifyDataSetChanged();
                             loadNotesWithSettings();
                         });
+                        Set<Long> deletedIds = new HashSet<>(selected);
 
+                        UINotifier.showUndo(
+                                findViewById(android.R.id.content),
+                                "Eliminate " + deletedIds.size() + " note",
+                                "Annulla",
+                                () -> {
+
+                                    new Thread(() -> {
+
+                                        for (Long id : deletedIds) {
+                                            noteDao.restore(id, System.currentTimeMillis());
+                                        }
+
+                                        runOnUiThread(() -> {
+
+                                            loadNotesWithSettings();
+
+                                            UINotifier.showSuccess(
+                                                    findViewById(android.R.id.content),
+                                                    "Ripristinate " + deletedIds.size() + " note"
+                                            );
+                                        });
+
+                                    }).start();
+                                }
+                        );
                     }).start();
 
                 })
